@@ -1,9 +1,11 @@
 import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js";
-import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=6";
+import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=7";
 import { icon } from "./icons.js";
 import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=6";
 import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=6";
 import { payPeriodForDate } from "./pay-cycle.js?v=6";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift } from "./work.js?v=7";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=7";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -22,6 +24,12 @@ const state = {
   wallets: [],
   transactions: [],
   fixedCosts: [],
+  workplaces: [],
+  workShifts: [],
+  workMode: "month",
+  workMonth: dateKey().slice(0, 7),
+  workSelectedDate: dateKey(),
+  workEditor: null,
   moneyMode: "wallet",
   moneySelectedDate: null,
   moneyMonth: dateKey().slice(0, 7),
@@ -62,12 +70,13 @@ function toast(message, isError = false) {
 }
 
 async function refresh() {
-  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts"].map((store) => getAll(state.db, store)));
+  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.workplaces, state.workShifts] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "workplaces", "workShifts"].map((store) => getAll(state.db, store)));
   if (!state.moneyMonthInitialized) { state.moneyMonth = payPeriodForDate(dateKey(), state.wallets.find((item) => item.id === "cash")); state.moneyMonthInitialized = true; }
   render();
 }
 
 function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
+function workData() { return { workplaces: state.workplaces, shifts: state.workShifts, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
   return `<header class="screen-header">
@@ -86,6 +95,7 @@ function renderHome() {
   const today = dateKey();
   const summary = homeSummary(state.events, state.todos, today);
   const completedCount = summary.todayTodos.filter((item) => item.completedAt).length;
+  const upcomingShift = nextShift(state.workShifts);
   return `<div class="screen home-screen">
     ${header({
       eyebrow: `${formatDay(today, { year: "numeric", month: "long", day: "numeric" })}（${weekdayLabel(today)}）`,
@@ -109,6 +119,7 @@ function renderHome() {
         ${summary.todayTodos.length ? summary.todayTodos.slice(0, 5).map((todo) => renderTodoRow(todo, false)).join("") : `<div class="empty-inline"><span class="empty-icon pink">${icon("check", 22)}</span><p>今日のToDoはありません</p></div>`}
         <button class="inline-add" data-action="add-todo">${icon("plus", 17)} ToDoを追加</button>
       </section>
+      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">WORK</span><h2>次の仕事</h2></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${upcomingShift ? renderShiftAgendaRow(upcomingShift) : '<div class="empty-inline"><span class="empty-icon blue">' + icon("work", 22) + '</span><p>今後のシフトはありません</p></div>'}</section>
       <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">MONEY</span><h2>お金</h2></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
     </main>
   </div>`;
@@ -123,6 +134,12 @@ function renderEventRow(event) {
   </button>`;
 }
 
+function renderShiftAgendaRow(shift) {
+  const workplace = state.workplaces.find((item) => item.id === shift.workplaceId);
+  if (!workplace) return "";
+  return `<button class="event-row" data-action="work-edit-shift" data-id="${escapeHTML(shift.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(workplace.name)}</strong><span>${escapeHTML(displayDate(shift.date))} · ${escapeHTML(shift.start)}〜${escapeHTML(shift.end)} · ${Math.round(shiftMinutes(shift) / 6) / 10}時間 · 見込み ${yen(shiftPay(shift, workplace))}</span></span>${icon("chevron", 16)}</button>`;
+}
+
 function renderTodoRow(todo, overdue=false) {
   const category=CATEGORIES[todo.category]||CATEGORIES.other;
   const due=todo.occurrenceDate||todo.dueDate||"";
@@ -130,13 +147,13 @@ function renderTodoRow(todo, overdue=false) {
 }
 
 function renderDayAgenda(key) {
-  const events=eventsForDay(state.events,key),todos=todosForDay(state.todos,key),fixed=fixedCostsForDay(state.fixedCosts,key);
-  return `<div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">AGENDA</span><h2>${escapeHTML(displayDate(key))}</h2></div><button class="small-today" data-action="today">今日</button></div>${events.length||todos.length||fixed.length?events.map(renderEventRow).join("")+todos.map((todo)=>renderTodoRow(todo)).join("")+fixed.map((item)=>`<button class="event-row" data-action="money-edit-fixed" data-id="${escapeHTML(item.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(item.title)} · ${yen(item.amount)}</strong><span>固定費 ${item.paid?"· 支払い済み":""}</span></span>${icon("chevron",16)}</button>`).join(""):`<div class="empty-inline"><p>この日の予定・ToDoはありません</p></div>`}</div>`;
+  const events=eventsForDay(state.events,key),todos=todosForDay(state.todos,key),fixed=fixedCostsForDay(state.fixedCosts,key),shifts=shiftsForDay(state.workShifts,key);
+  return `<div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">AGENDA</span><h2>${escapeHTML(displayDate(key))}</h2></div><button class="small-today" data-action="today">今日</button></div>${events.length||todos.length||fixed.length||shifts.length?events.map(renderEventRow).join("")+shifts.map(renderShiftAgendaRow).join("")+todos.map((todo)=>renderTodoRow(todo)).join("")+fixed.map((item)=>`<button class="event-row" data-action="money-edit-fixed" data-id="${escapeHTML(item.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(item.title)} · ${yen(item.amount)}</strong><span>固定費 ${item.paid?"· 支払い済み":""}</span></span>${icon("chevron",16)}</button>`).join(""):`<div class="empty-inline"><p>この日の予定・ToDo・シフトはありません</p></div>`}</div>`;
 }
 
 function renderCalendar() {
   const today=dateKey(),cells=monthGrid(state.year,state.month);
-  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${state.year}年${state.month+1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="weekdays"><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span></div><div class="calendar-grid">${cells.map((key)=>{const colors=eventsForDay(state.events,key).map((event)=>CATEGORIES[event.category]?.color||"#9b9eaa");colors.push(...todosForDay(state.todos,key).map((todo)=>todo.completedAt?"#bfc8c4":"#e76995"));colors.push(...fixedCostsForDay(state.fixedCosts,key).map(() => "#f28b54"));return `<button class="day-cell ${Number(key.slice(5,7))===state.month+1?"":"outside"} ${key===today?"today":""} ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(displayDate(key))}"><span>${Number(key.slice(-2))}</span><span class="day-dots">${colors.slice(0,3).map((color)=>`<i style="background:${color}"></i>`).join("")}</span></button>`}).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${state.year}年${state.month+1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="weekdays"><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span></div><div class="calendar-grid">${cells.map((key)=>{const colors=eventsForDay(state.events,key).map((event)=>CATEGORIES[event.category]?.color||"#9b9eaa");colors.push(...shiftsForDay(state.workShifts,key).map(() => "#f28b54"));colors.push(...todosForDay(state.todos,key).map((todo)=>todo.completedAt?"#bfc8c4":"#e76995"));colors.push(...fixedCostsForDay(state.fixedCosts,key).map(() => "#f28b54"));return `<button class="day-cell ${Number(key.slice(5,7))===state.month+1?"":"outside"} ${key===today?"today":""} ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(displayDate(key))}"><span>${Number(key.slice(-2))}</span><span class="day-dots">${colors.slice(0,3).map((color)=>`<i style="background:${color}"></i>`).join("")}</span></button>`}).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
 }
 
 function weekStart(key) {
@@ -146,7 +163,7 @@ function weekStart(key) {
 
 function renderWeek() {
   const first=weekStart(state.selectedDate),days=Array.from({length:7},(_,i)=>addDays(first,i));
-  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length+fixedCostsForDay(state.fixedCosts,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length+fixedCostsForDay(state.fixedCosts,key).length+shiftsForDay(state.workShifts,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
 }
 
 function renderDay() {
@@ -155,7 +172,7 @@ function renderDay() {
 
 function renderEventList() {
   const days=Array.from({length:30},(_,i)=>addDays(state.selectedDate,i));
-  const active=days.filter((key)=>eventsForDay(state.events,key).length||todosForDay(state.todos,key).length||fixedCostsForDay(state.fixedCosts,key).length);
+  const active=days.filter((key)=>eventsForDay(state.events,key).length||todosForDay(state.todos,key).length||fixedCostsForDay(state.fixedCosts,key).length||shiftsForDay(state.workShifts,key).length);
   return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前の30日">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(state.selectedDate))}から30日</h2><button class="icon-button" data-action="next-period" aria-label="次の30日">${icon("chevron",20)}</button></div>${active.length?active.map(renderDayAgenda).join(""):`<div class="empty-large"><strong>この期間の予定はありません</strong></div>`}</div>`;
 }
 
@@ -206,13 +223,13 @@ function renderSettings() {
   return `<div class="screen settings-screen">
     ${header({ title: "設定", back: true })}
     <main class="screen-content">
-      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">YOUR DATA</span><h2>バックアップ</h2></div></div><p class="settings-copy">予定・ToDo・お金の記録は、この端末のブラウザ内に保存されます。端末の変更やブラウザデータの削除に備えて、定期的にファイルを書き出してください。</p>
+      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">YOUR DATA</span><h2>バックアップ</h2></div></div><p class="settings-copy">予定・ToDo・お金・仕事の記録は、この端末のブラウザ内に保存されます。端末の変更やブラウザデータの削除に備えて、定期的にファイルを書き出してください。</p>
         <button class="settings-action" data-action="export">${icon("download", 20)}<span><strong>バックアップを書き出す</strong><small>JSONファイルとして保存</small></span>${icon("chevron", 17)}</button>
         <button class="settings-action" data-action="import">${icon("upload", 20)}<span><strong>バックアップを読み込む</strong><small>同じIDのデータはファイルの内容で更新</small></span>${icon("chevron", 17)}</button>
         <input id="backup-file" type="file" accept="application/json,.json" hidden />
       </section>
       <div class="privacy-note">${icon("wallet", 18)}<p>このアプリは現在、サーバーへ個人データを送信しません。バックアップの保管場所はご自身で選べます。</p></div>
-      <p class="version-label">自分管理 · Phase 3</p>
+      <p class="version-label">自分管理 · Phase 4</p>
     </main>
   </div>`;
 }
@@ -254,11 +271,12 @@ function renderNav() {
 
 function render() {
   if (!state.db) return;
-  const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : renderFutureTab(state.tab);
-  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}`;
+  const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : state.tab === "work" ? renderWorkScreen(workData()) : renderFutureTab(state.tab);
+  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}`;
   document.title = `${state.page === "settings" ? "設定" : state.page === "reminders" ? "リマインダー" : TABS.find((tab) => tab.id === state.tab)?.label} | 自分管理`;
   if (state.editor) root.querySelector("#editor-form [name=title]")?.focus();
   if (state.moneyEditor) root.querySelector("#money-form input")?.focus();
+  if (state.workEditor) root.querySelector("#work-form input")?.focus();
 }
 
 function openEditor(kind, id = null) {
@@ -400,6 +418,60 @@ async function deleteMoneyItem(kind,id){
   toast("削除しました。");
 }
 
+function shiftWorkMonth(delta) {
+  const [year, month] = state.workMonth.split("-").map(Number);
+  state.workMonth = dateKey(new Date(year, month - 1 + delta, 1)).slice(0, 7);
+  state.workSelectedDate = `${state.workMonth}-01`;
+  render();
+}
+
+function openWorkEditor(kind, id = null) {
+  if (kind === "shift" && !state.workplaces.length) {
+    state.tab = "work";
+    state.workMode = "workplaces";
+    render();
+    toast("先に勤務先を登録してください。");
+    return;
+  }
+  state.workEditor = { kind, id };
+  render();
+}
+
+async function saveWorkForm(form) {
+  if (state.busy) return;
+  const { kind, id } = form.dataset;
+  const existing = id ? (kind === "workplace" ? state.workplaces : state.workShifts).find((item) => item.id === id) : null;
+  const fields = new FormData(form);
+  const now = new Date().toISOString();
+  const common = { id: existing?.id || crypto.randomUUID(), createdAt: existing?.createdAt || now, updatedAt: now };
+  const record = kind === "workplace"
+    ? { ...common, name: String(fields.get("name") || "").trim(), hourlyWage: Number(fields.get("hourlyWage")), payday: fields.get("payday") ? Number(fields.get("payday")) : null, location: String(fields.get("location") || "").trim(), note: String(fields.get("note") || "").trim() }
+    : { ...common, workplaceId: String(fields.get("workplaceId") || ""), date: String(fields.get("date") || ""), start: String(fields.get("start") || ""), end: String(fields.get("end") || ""), breakMinutes: Number(fields.get("breakMinutes")), note: String(fields.get("note") || "").trim() };
+  const error = kind === "workplace" ? validateWorkplace(record) : validateWorkShift(record, state.workplaces);
+  if (error) { form.querySelector("#work-form-error").textContent = error; return; }
+  state.busy = true;
+  try {
+    await putRecord(state.db, kind === "workplace" ? "workplaces" : "workShifts", record);
+    state.workEditor = null;
+    if (kind === "shift") { state.workMonth = record.date.slice(0, 7); state.workSelectedDate = record.date; state.workMode = "month"; }
+    await refresh();
+    toast(existing ? "変更を保存しました。" : "登録しました。");
+  } catch (cause) { form.querySelector("#work-form-error").textContent = `保存できませんでした。${cause?.message || ""}`; }
+  finally { state.busy = false; }
+}
+
+async function deleteWorkItem(kind, id) {
+  if (kind === "workplace" && state.workShifts.some((shift) => shift.workplaceId === id)) {
+    toast("この勤務先のシフトを削除・変更してから削除してください。", true);
+    return;
+  }
+  if (!window.confirm(`${kind === "workplace" ? "勤務先" : "シフト"}を削除しますか？`)) return;
+  await deleteRecord(state.db, kind === "workplace" ? "workplaces" : "workShifts", id);
+  state.workEditor = null;
+  await refresh();
+  toast("削除しました。");
+}
+
 async function downloadBackup() {
   const backup = await exportBackup(state.db);
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -418,7 +490,7 @@ async function loadBackup(file) {
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) throw new Error("ファイルが大きすぎます（上限10MB）。");
   const data = JSON.parse(await file.text());
-  if (!window.confirm("バックアップを読み込みますか？同じIDの予定・ToDo・お金の記録はファイルの内容で更新されます。")) return;
+  if (!window.confirm("バックアップを読み込みますか？同じIDの予定・ToDo・お金・仕事の記録はファイルの内容で更新されます。")) return;
   await importBackup(state.db, data);
   state.moneyMonthInitialized=false;
   await refresh();
@@ -429,15 +501,16 @@ root.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const action = button.dataset.action;
-  if ((action === "close-editor" || action === "money-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
+  if ((action === "close-editor" || action === "money-close-editor" || action === "work-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
   try {
-    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; render(); window.scrollTo(0, 0); }
+    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; state.workEditor = null; render(); window.scrollTo(0, 0); }
     else if (action === "settings") { state.page = "settings"; render(); }
     else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
     else if (action === "goto-schedule") { state.tab = "schedule"; state.scheduleMode = "calendar"; render(); }
     else if (action === "goto-todos") { state.tab = "schedule"; state.scheduleMode = "todos"; render(); }
     else if (action === "goto-money") { state.tab = "money"; state.moneyMode = "wallet"; render(); }
+    else if (action === "goto-work") { state.tab = "work"; state.workMode = "month"; render(); }
     else if (action === "mode-calendar") { state.scheduleMode = "calendar"; render(); }
     else if (action === "mode-todos") { state.scheduleMode = "todos"; render(); }
     else if (action === "mode") { state.scheduleMode = button.dataset.mode; render(); }
@@ -459,6 +532,16 @@ root.addEventListener("click", async (event) => {
     else if (action === "money-toggle-fixed") await toggleFixedPaid(button.dataset.id, button.dataset.date);
     else if (action === "money-close-editor") closeMoneyEditor();
     else if (action === "money-delete") await deleteMoneyItem(button.dataset.kind, button.dataset.id);
+    else if (action === "work-mode") { state.workMode = button.dataset.mode; render(); }
+    else if (action === "work-prev-month") shiftWorkMonth(-1);
+    else if (action === "work-next-month") shiftWorkMonth(1);
+    else if (action === "work-select-day") { state.workSelectedDate = button.dataset.date; state.workMonth = state.workSelectedDate.slice(0, 7); render(); }
+    else if (action === "work-add-workplace") openWorkEditor("workplace");
+    else if (action === "work-edit-workplace") openWorkEditor("workplace", button.dataset.id);
+    else if (action === "work-add-shift") openWorkEditor("shift");
+    else if (action === "work-edit-shift") openWorkEditor("shift", button.dataset.id);
+    else if (action === "work-close-editor") { state.workEditor = null; render(); }
+    else if (action === "work-delete") await deleteWorkItem(button.dataset.kind, button.dataset.id);
     else if (action === "today") { state.selectedDate = dateKey(); const now = new Date(); state.month = now.getMonth(); state.year = now.getFullYear(); render(); }
     else if (action === "add-event") openEditor("event");
     else if (action === "add-todo") openEditor("todo");
@@ -477,6 +560,7 @@ root.addEventListener("click", async (event) => {
 root.addEventListener("submit", (event) => {
   if (event.target.id === "editor-form") { event.preventDefault(); saveForm(event.target); }
   else if (event.target.id === "money-form") { event.preventDefault(); saveMoneyForm(event.target); }
+  else if (event.target.id === "work-form") { event.preventDefault(); saveWorkForm(event.target); }
 });
 
 root.addEventListener("change", async (event) => {
@@ -489,6 +573,7 @@ root.addEventListener("change", async (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.editor) closeEditor();
   else if (event.key === "Escape" && state.moneyEditor) closeMoneyEditor();
+  else if (event.key === "Escape" && state.workEditor) { state.workEditor = null; render(); }
 });
 
 window.addEventListener("pageshow", () => {
