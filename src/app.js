@@ -1,5 +1,5 @@
 import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js";
-import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js";
+import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=3";
 import { icon } from "./icons.js";
 import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js";
 import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js";

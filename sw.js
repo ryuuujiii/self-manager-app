@@ -2,9 +2,9 @@ const CACHE_NAME = "self-manager-v4";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./src/app.js",
-  "./src/db.js",
+  "./styles.css?v=3",
+  "./src/app.js?v=3",
+  "./src/db.js?v=3",
   "./src/money.js",
   "./src/money-ui.js",
   "./src/domain.js",
