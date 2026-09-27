@@ -1,4 +1,4 @@
-import { CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, todosForDay, validateEvent, validateTodo } from "./domain.js";
+import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js";
 import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js";
 import { icon } from "./icons.js";
 
@@ -76,7 +76,7 @@ function renderHome() {
     ${header({
       eyebrow: `${formatDay(today, { year: "numeric", month: "long", day: "numeric" })}（${weekdayLabel(today)}）`,
       title: `${Number(today.slice(-2))}日のまとめ`,
-      actions: `<button class="icon-button" data-action="settings" aria-label="設定">${icon("settings", 21)}</button>`
+      actions: `<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell", 21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings", 21)}</button>`
     })}
     <main class="screen-content">
       <section class="welcome-band"><div><span class="band-kicker">TODAY AT A GLANCE</span><strong>今日の自分に必要なこと</strong><span>予定とやることを、ここでまとめて確認。</span></div><span class="band-icon">${icon("sparkle", 29)}</span></section>
@@ -109,58 +109,64 @@ function renderEventRow(event) {
   </button>`;
 }
 
-function renderTodoRow(todo, overdue = false) {
-  const category = CATEGORIES[todo.category] || CATEGORIES.other;
-  return `<div class="todo-row ${todo.completedAt ? "done" : ""}">
-    <button class="todo-check ${todo.completedAt ? "checked" : ""}" data-action="toggle-todo" data-id="${escapeHTML(todo.id)}" aria-label="${todo.completedAt ? "未完了に戻す" : "完了にする"}: ${escapeHTML(todo.title)}">${todo.completedAt ? icon("check", 15) : ""}</button>
-    <button class="todo-details" data-action="edit-todo" data-id="${escapeHTML(todo.id)}"><strong>${escapeHTML(todo.title)}</strong><span>${overdue ? `期限 ${escapeHTML(displayDate(todo.dueDate))}` : todo.dueTime ? `${escapeHTML(todo.dueTime)} · ` : ""}${escapeHTML(category.label)}</span></button>
-    ${overdue ? `<span class="overdue-tag">期限超過</span>` : ""}
-  </div>`;
+function renderTodoRow(todo, overdue=false) {
+  const category=CATEGORIES[todo.category]||CATEGORIES.other;
+  const due=todo.occurrenceDate||todo.dueDate||"";
+  return `<div class="todo-row ${todo.completedAt?"done":""}"><button class="todo-check ${todo.completedAt?"checked":""}" data-action="toggle-todo" data-id="${escapeHTML(todo.id)}" data-date="${escapeHTML(due)}" aria-label="${todo.completedAt?"未完了に戻す":"完了にする"}: ${escapeHTML(todo.title)}">${todo.completedAt?icon("check",15):""}</button><button class="todo-details" data-action="edit-todo" data-id="${escapeHTML(todo.id)}"><strong>${escapeHTML(todo.title)}</strong><span>${overdue?`期限 ${escapeHTML(displayDate(due))} · `:todo.dueTime?`${escapeHTML(todo.dueTime)} · `:""}${escapeHTML(category.label)}${todo.repeatRule&&todo.repeatRule!=="none"?" · 繰り返し":""}</span></button>${overdue?`<span class="overdue-tag">期限超過</span>`:""}</div>`;
+}
+
+function renderDayAgenda(key) {
+  const events=eventsForDay(state.events,key),todos=todosForDay(state.todos,key);
+  return `<div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">AGENDA</span><h2>${escapeHTML(displayDate(key))}</h2></div><button class="small-today" data-action="today">今日</button></div>${events.length||todos.length?events.map(renderEventRow).join("")+todos.map((todo)=>renderTodoRow(todo)).join(""):`<div class="empty-inline"><p>この日の予定・ToDoはありません</p></div>`}</div>`;
 }
 
 function renderCalendar() {
-  const today = dateKey();
-  const cells = monthGrid(state.year, state.month);
-  const byDate = new Map();
-  for (const event of state.events) byDate.set(event.date, [...(byDate.get(event.date) || []), CATEGORIES[event.category]?.color || "#9b9eaa"]);
-  for (const todo of state.todos) if (todo.dueDate) byDate.set(todo.dueDate, [...(byDate.get(todo.dueDate) || []), todo.completedAt ? "#bfc8c4" : "#e76995"]);
-  const selectedEvents = eventsForDay(state.events, state.selectedDate);
-  const selectedTodos = todosForDay(state.todos, state.selectedDate);
-  return `<div class="calendar-panel">
-    <div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft", 20)}</button><h2>${state.year}年${state.month + 1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron", 20)}</button></div>
-    <div class="weekdays"><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span></div>
-    <div class="calendar-grid">${cells.map((key) => {
-      const inMonth = Number(key.slice(5, 7)) === state.month + 1;
-      const dots = (byDate.get(key) || []).slice(0, 3);
-      return `<button class="day-cell ${inMonth ? "" : "outside"} ${key === today ? "today" : ""} ${key === state.selectedDate ? "selected" : ""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(displayDate(key))}"><span>${Number(key.slice(-2))}</span><span class="day-dots">${dots.map((color) => `<i style="background:${color}"></i>`).join("")}</span></button>`;
-    }).join("")}</div>
-    <div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">SELECTED DAY</span><h2>${escapeHTML(displayDate(state.selectedDate))}</h2></div><button class="small-today" data-action="today">今日</button></div>
-      ${selectedEvents.length || selectedTodos.length ? `${selectedEvents.map(renderEventRow).join("")}${selectedTodos.map((todo) => renderTodoRow(todo)).join("")}` : `<div class="empty-inline"><p>この日の予定・ToDoはありません</p></div>`}
-    </div>
-  </div>`;
+  const today=dateKey(),cells=monthGrid(state.year,state.month);
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${state.year}年${state.month+1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="weekdays"><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span></div><div class="calendar-grid">${cells.map((key)=>{const colors=eventsForDay(state.events,key).map((event)=>CATEGORIES[event.category]?.color||"#9b9eaa");colors.push(...todosForDay(state.todos,key).map((todo)=>todo.completedAt?"#bfc8c4":"#e76995"));return `<button class="day-cell ${Number(key.slice(5,7))===state.month+1?"":"outside"} ${key===today?"today":""} ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(displayDate(key))}"><span>${Number(key.slice(-2))}</span><span class="day-dots">${colors.slice(0,3).map((color)=>`<i style="background:${color}"></i>`).join("")}</span></button>`}).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+}
+
+function weekStart(key) {
+  const [y,m,d]=key.split("-").map(Number);
+  return addDays(key,-((new Date(y,m-1,d).getDay()+6)%7));
+}
+
+function renderWeek() {
+  const first=weekStart(state.selectedDate),days=Array.from({length:7},(_,i)=>addDays(first,i));
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+}
+
+function renderDay() {
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前日">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(state.selectedDate))}</h2><button class="icon-button" data-action="next-period" aria-label="翌日">${icon("chevron",20)}</button></div>${renderDayAgenda(state.selectedDate)}</div>`;
+}
+
+function renderEventList() {
+  const days=Array.from({length:30},(_,i)=>addDays(state.selectedDate,i));
+  const active=days.filter((key)=>eventsForDay(state.events,key).length||todosForDay(state.todos,key).length);
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前の30日">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(state.selectedDate))}から30日</h2><button class="icon-button" data-action="next-period" aria-label="次の30日">${icon("chevron",20)}</button></div>${active.length?active.map(renderDayAgenda).join(""):`<div class="empty-large"><strong>この期間の予定はありません</strong></div>`}</div>`;
+}
+
+function listTodo(todo,today) {
+  if (!todo.dueDate||!todo.repeatRule||todo.repeatRule==="none") return todo;
+  let key=todo.dueDate>today?todo.dueDate:today;
+  for(let i=0;i<370;i++,key=addDays(key,1)){
+    if(todo.repeatUntil&&key>todo.repeatUntil)break;
+    const occurrence=todoOccurrence(todo,key);
+    if(occurrence&&!occurrence.completedAt)return occurrence;
+  }
+  return {...todo,occurrenceDate:todo.repeatUntil||todo.dueDate,completedAt:"done"};
 }
 
 function renderTodoList() {
-  const today = dateKey();
-  const sorted = [...state.todos].sort((a, b) => Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt)) || (a.dueDate || "9999-99-99").localeCompare(b.dueDate || "9999-99-99") || (a.dueTime || "99:99").localeCompare(b.dueTime || "99:99"));
-  const open = sorted.filter((todo) => !todo.completedAt);
-  const done = sorted.filter((todo) => todo.completedAt);
-  return `<div class="todo-list-panel">
-    <div class="section-heading"><div><span class="section-kicker green">YOUR TASKS</span><h2>やること一覧</h2></div><span class="section-count">未完了 ${open.length} 件</span></div>
-    ${open.length ? open.map((todo) => `<div class="todo-list-item">${renderTodoRow(todo)}<p class="todo-due">${todo.dueDate ? `${todo.dueDate < today ? "期限超過 · " : "期限 · "}${escapeHTML(displayDate(todo.dueDate))}` : "期限なし"}</p></div>`).join("") : `<div class="empty-large"><span>${icon("check", 30)}</span><strong>未完了のToDoはありません</strong><p>やることを登録すると、ここで管理できます。</p></div>`}
-    ${done.length ? `<div class="completed-heading">完了済み <span>${done.length}</span></div>${done.map((todo) => `<div class="todo-list-item">${renderTodoRow(todo)}</div>`).join("")}` : ""}
-  </div>`;
+  const today=dateKey();
+  const sorted=state.todos.map((todo)=>listTodo(todo,today)).sort((a,b)=>Number(Boolean(a.completedAt))-Number(Boolean(b.completedAt))||(a.occurrenceDate||a.dueDate||"9999").localeCompare(b.occurrenceDate||b.dueDate||"9999"));
+  const open=sorted.filter((todo)=>!todo.completedAt),done=sorted.filter((todo)=>todo.completedAt);
+  const row=(todo)=>`<div class="todo-list-item">${renderTodoRow(todo)}<p class="todo-due">${todo.dueDate?`${todo.repeatRule&&todo.repeatRule!=="none"?"次回":todo.dueDate<today&&!todo.completedAt?"期限超過":"期限"} · ${escapeHTML(displayDate(todo.occurrenceDate||todo.dueDate))}`:"期限なし"}</p></div>`;
+  return `<div class="todo-list-panel"><div class="section-heading"><div><span class="section-kicker green">YOUR TASKS</span><h2>やること一覧</h2></div><span class="section-count">未完了 ${open.length} 件</span></div>${open.length?open.map(row).join(""):`<div class="empty-large"><strong>未完了のToDoはありません</strong></div>`}${done.length?`<div class="completed-heading">完了済み <span>${done.length}</span></div>${done.map(row).join("")}`:""}</div>`;
 }
 
 function renderSchedule() {
-  return `<div class="screen schedule-screen">
-    ${header({ eyebrow: "予定とやることをひとつに", title: "予定", actions: `<button class="icon-button" data-action="settings" aria-label="設定">${icon("settings", 21)}</button>` })}
-    <main class="screen-content">
-      <div class="segmented" role="tablist" aria-label="予定の表示"><button role="tab" aria-selected="${state.scheduleMode === "calendar"}" class="${state.scheduleMode === "calendar" ? "active" : ""}" data-action="mode-calendar">カレンダー</button><button role="tab" aria-selected="${state.scheduleMode === "todos"}" class="${state.scheduleMode === "todos" ? "active" : ""}" data-action="mode-todos">ToDo</button></div>
-      ${state.scheduleMode === "calendar" ? renderCalendar() : renderTodoList()}
-      <div class="schedule-actions"><button class="secondary-button" data-action="add-todo">${icon("plus", 18)} ToDo</button><button class="primary-button" data-action="add-event">${icon("plus", 18)} 予定を追加</button></div>
-    </main>
-  </div>`;
+  const modes=[["calendar","月"],["week","週"],["day","日"],["list","一覧"],["todos","ToDo"]];
+  return `<div class="screen schedule-screen">${header({eyebrow:"予定とやることをひとつに",title:"予定",actions:`<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell",21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings",21)}</button>`})}<main class="screen-content"><div class="segmented schedule-modes" role="tablist" aria-label="予定の表示">${modes.map(([mode,label])=>`<button role="tab" aria-selected="${state.scheduleMode===mode}" class="${state.scheduleMode===mode?"active":""}" data-action="mode" data-mode="${mode}">${label}</button>`).join("")}</div>${state.scheduleMode==="calendar"?renderCalendar():state.scheduleMode==="week"?renderWeek():state.scheduleMode==="day"?renderDay():state.scheduleMode==="list"?renderEventList():renderTodoList()}<div class="schedule-actions"><button class="secondary-button" data-action="add-todo">${icon("plus",18)} ToDo</button><button class="primary-button" data-action="add-event">${icon("plus",18)} 予定を追加</button></div></main></div>`;
 }
 
 function renderFutureTab(kind) {
@@ -175,6 +181,13 @@ function renderFutureTab(kind) {
   </div>`;
 }
 
+function renderReminders() {
+  const now=new Date(),items=remindersForWindow(state.events,state.todos,now);
+  const due=items.filter((item)=>item.triggerAt<=now),upcoming=items.filter((item)=>item.triggerAt>now);
+  const row=(item)=>`<button class="reminder-row" data-action="edit-${item.kind}" data-id="${escapeHTML(item.id)}"><span class="reminder-icon">${icon(item.kind==="event"?"calendar":"check",18)}</span><span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(displayDate(item.occurrenceDate))} ${item.scheduledAt.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})} · ${item.kind==="event"?"予定":"ToDo"}</small></span><em class="${item.triggerAt<=now?"due":""}">${item.triggerAt<=now?"確認":"予定"}</em></button>`;
+  return `<div class="screen reminders-screen">${header({title:"リマインダー",back:true})}<main class="screen-content"><div class="privacy-note">${icon("bell",18)}<p>アプリを開いているときに確認できます。指定時刻のバックグラウンド通知はまだ利用できません。</p></div><section class="content-card"><div class="section-heading"><h2>確認する項目</h2><span class="section-count">${due.length}件</span></div>${due.length?due.map(row).join(""):`<div class="empty-inline"><p>確認する項目はありません</p></div>`}</section><section class="content-card"><div class="section-heading"><h2>これから7日間</h2><span class="section-count">${upcoming.length}件</span></div>${upcoming.length?upcoming.map(row).join(""):`<div class="empty-inline"><p>予定されているリマインダーはありません</p></div>`}</section></main></div>`;
+}
+
 function renderSettings() {
   return `<div class="screen settings-screen">
     ${header({ title: "設定", back: true })}
@@ -185,7 +198,7 @@ function renderSettings() {
         <input id="backup-file" type="file" accept="application/json,.json" hidden />
       </section>
       <div class="privacy-note">${icon("wallet", 18)}<p>このアプリは現在、サーバーへ個人データを送信しません。バックアップの保管場所はご自身で選べます。</p></div>
-      <p class="version-label">自分管理 · Phase 1</p>
+      <p class="version-label">自分管理 · Phase 2</p>
     </main>
   </div>`;
 }
@@ -204,9 +217,14 @@ function renderEditor() {
   return `<div class="modal-backdrop" data-action="close-editor"><section class="editor-sheet" role="dialog" aria-modal="true" aria-labelledby="editor-title">
     <div class="sheet-handle"></div><div class="editor-heading"><button class="text-link muted" type="button" data-action="close-editor">キャンセル</button><h2 id="editor-title">${title}</h2><span class="editor-heading-spacer"></span></div>
     <form id="editor-form" data-kind="${kind}" data-id="${escapeHTML(id || "")}">
+      ${id && item?.repeatRule && item.repeatRule !== "none" ? `<p class="field-help">この変更は繰り返し全体に適用されます。</p>` : ""}
       <label class="field"><span>タイトル</span><input name="title" maxlength="120" placeholder="${isEvent ? "予定の内容" : "やること"}" value="${escapeHTML(item?.title || "")}" required autofocus /></label>
       <label class="field"><span>${isEvent ? "日付" : "期限日"}</span><input name="date" type="date" value="${escapeHTML(day)}" ${isEvent ? "required" : ""} /></label>
       ${isEvent ? `<label class="toggle-field"><span>終日の予定</span><input name="allDay" type="checkbox" ${item?.allDay ? "checked" : ""} /></label><div class="time-fields"><label class="field"><span>開始</span><input name="start" type="time" value="${escapeHTML(item?.start || "09:00")}" /></label><label class="field"><span>終了</span><input name="end" type="time" value="${escapeHTML(item?.end || "10:00")}" /></label></div>` : `<label class="field"><span>期限時刻 <small>任意</small></span><input name="dueTime" type="time" value="${escapeHTML(item?.dueTime || "")}" /></label>`}
+      <label class="field"><span>繰り返し</span><select name="repeatRule"><option value="none" ${!item?.repeatRule || item.repeatRule === "none" ? "selected" : ""}>なし</option><option value="daily" ${item?.repeatRule === "daily" ? "selected" : ""}>毎日</option><option value="weekly" ${item?.repeatRule === "weekly" ? "selected" : ""}>毎週</option><option value="monthly" ${item?.repeatRule === "monthly" ? "selected" : ""}>毎月</option></select></label>
+      <label class="field"><span>繰り返し終了日 <small>任意</small></span><input name="repeatUntil" type="date" value="${escapeHTML(item?.repeatUntil || "")}" /></label>
+      <label class="field"><span>リマインダー</span><select name="reminderLead"><option value="none" ${!item?.reminderLead || item.reminderLead === "none" ? "selected" : ""}>なし</option><option value="at" ${item?.reminderLead === "at" ? "selected" : ""}>時刻になったら</option><option value="oneHour" ${item?.reminderLead === "oneHour" ? "selected" : ""}>1時間前</option><option value="oneDay" ${item?.reminderLead === "oneDay" ? "selected" : ""}>1日前</option></select></label>
+      <p class="field-help">アプリ内で確認できます。終日・時刻なしは9:00が基準です。</p>
       <label class="field"><span>カテゴリ</span><select name="category">${categoryOptions(item?.category || (isEvent ? "private" : "life"))}</select></label>
       <label class="field"><span>メモ <small>任意</small></span><textarea name="note" rows="3" maxlength="2000" placeholder="補足があれば記入">${escapeHTML(item?.note || "")}</textarea></label>
       <p class="form-error" id="form-error" role="alert"></p>
@@ -222,9 +240,9 @@ function renderNav() {
 
 function render() {
   if (!state.db) return;
-  const screen = state.page === "settings" ? renderSettings() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : renderFutureTab(state.tab);
+  const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : renderFutureTab(state.tab);
   root.innerHTML = `${screen}${renderNav()}${renderEditor()}`;
-  document.title = `${state.page === "settings" ? "設定" : TABS.find((tab) => tab.id === state.tab)?.label} | 自分管理`;
+  document.title = `${state.page === "settings" ? "設定" : state.page === "reminders" ? "リマインダー" : TABS.find((tab) => tab.id === state.tab)?.label} | 自分管理`;
   if (state.editor) root.querySelector("#editor-form [name=title]")?.focus();
 }
 
@@ -246,11 +264,18 @@ function changeMonth(delta) {
   render();
 }
 
-async function toggleTodo(id) {
-  const todo = state.todos.find((record) => record.id === id);
-  if (!todo) return;
-  await putRecord(state.db, "todos", { ...todo, completedAt: todo.completedAt ? null : new Date().toISOString(), updatedAt: new Date().toISOString() });
-  await refresh();
+async function toggleTodo(id, occurrenceDate) {
+  const todo=state.todos.find((record)=>record.id===id);
+  if(!todo)return;
+  const now=new Date().toISOString();
+  let updated;
+  if(todo.repeatRule&&todo.repeatRule!=="none"){
+    if(!occurrenceDate||!todoOccurrence(todo,occurrenceDate))return;
+    const dates=new Set(todo.completedDates||[]);
+    if(dates.has(occurrenceDate))dates.delete(occurrenceDate);else dates.add(occurrenceDate);
+    updated={...todo,completedDates:[...dates].sort(),updatedAt:now};
+  }else updated={...todo,completedAt:todo.completedAt?null:now,updatedAt:now};
+  return putRecord(state.db,"todos",updated).then(refresh);
 }
 
 async function saveForm(form) {
@@ -259,10 +284,13 @@ async function saveForm(form) {
   const existing = form.dataset.id ? (kind === "event" ? state.events : state.todos).find((item) => item.id === form.dataset.id) : null;
   const fields = new FormData(form);
   const now = new Date().toISOString();
-  const common = { id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || "other"), note: String(fields.get("note") || "").trim(), createdAt: existing?.createdAt || now, updatedAt: now };
+  const repeatRule = String(fields.get("repeatRule") || "none");
+  const anchor = String(fields.get("date") || "");
+  const sameSeries = existing && existing.repeatRule === repeatRule && (existing.date || existing.dueDate) === anchor;
+  const common = { repeatRule, repeatUntil: String(fields.get("repeatUntil") || ""), reminderLead: String(fields.get("reminderLead") || "none"), id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || "other"), note: String(fields.get("note") || "").trim(), createdAt: existing?.createdAt || now, updatedAt: now };
   const record = kind === "event"
     ? { ...common, date: String(fields.get("date") || ""), allDay: fields.has("allDay"), start: fields.has("allDay") ? "" : String(fields.get("start") || ""), end: fields.has("allDay") ? "" : String(fields.get("end") || "") }
-    : { ...common, dueDate: String(fields.get("date") || ""), dueTime: String(fields.get("dueTime") || ""), completedAt: existing?.completedAt || null };
+    : { ...common, dueDate: String(fields.get("date") || ""), dueTime: String(fields.get("dueTime") || ""), completedAt: repeatRule === "none" ? (existing?.completedAt || null) : null, completedDates: sameSeries ? (existing?.completedDates || []) : [] };
   const error = kind === "event" ? validateEvent(record) : validateTodo(record);
   if (error) {
     form.querySelector("#form-error").textContent = error;
@@ -322,20 +350,23 @@ root.addEventListener("click", async (event) => {
   try {
     if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; render(); window.scrollTo(0, 0); }
     else if (action === "settings") { state.page = "settings"; render(); }
+    else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
     else if (action === "goto-schedule") { state.tab = "schedule"; state.scheduleMode = "calendar"; render(); }
     else if (action === "goto-todos") { state.tab = "schedule"; state.scheduleMode = "todos"; render(); }
     else if (action === "mode-calendar") { state.scheduleMode = "calendar"; render(); }
     else if (action === "mode-todos") { state.scheduleMode = "todos"; render(); }
+    else if (action === "mode") { state.scheduleMode = button.dataset.mode; render(); }
+    else if (action === "previous-period" || action === "next-period") { const step = state.scheduleMode === "week" ? 7 : state.scheduleMode === "list" ? 30 : 1; state.selectedDate = addDays(state.selectedDate, step * (action === "next-period" ? 1 : -1)); render(); }
     else if (action === "previous-month") changeMonth(-1);
     else if (action === "next-month") changeMonth(1);
-    else if (action === "select-day") { state.selectedDate = button.dataset.date; render(); }
+    else if (action === "select-day") { state.selectedDate = button.dataset.date; state.year = Number(state.selectedDate.slice(0,4)); state.month = Number(state.selectedDate.slice(5,7))-1; render(); }
     else if (action === "today") { state.selectedDate = dateKey(); const now = new Date(); state.month = now.getMonth(); state.year = now.getFullYear(); render(); }
     else if (action === "add-event") openEditor("event");
     else if (action === "add-todo") openEditor("todo");
     else if (action === "edit-event") openEditor("event", button.dataset.id);
     else if (action === "edit-todo") openEditor("todo", button.dataset.id);
-    else if (action === "toggle-todo") await toggleTodo(button.dataset.id);
+    else if (action === "toggle-todo") await toggleTodo(button.dataset.id, button.dataset.date);
     else if (action === "close-editor") closeEditor();
     else if (action === "delete-record") await deleteItem(button.dataset.kind, button.dataset.id);
     else if (action === "export") await downloadBackup();

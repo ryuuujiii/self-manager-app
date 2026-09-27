@@ -1,4 +1,4 @@
-const CACHE_NAME = "self-manager-v2";
+const CACHE_NAME = "self-manager-v3";
 const ASSETS = [
   "./",
   "./index.html",
