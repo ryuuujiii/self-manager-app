@@ -2,7 +2,7 @@ import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, mon
 import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=3";
 import { icon } from "./icons.js";
 import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=4";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -22,6 +22,8 @@ const state = {
   transactions: [],
   fixedCosts: [],
   moneyMode: "wallet",
+  moneyLedgerView: "calendar",
+  moneySelectedDate: null,
   moneyMonth: dateKey().slice(0, 7),
   moneyEditor: null,
   tab: "home",
@@ -63,7 +65,7 @@ async function refresh() {
   render();
 }
 
-function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth }; }
+function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth, ledgerView: state.moneyLedgerView, selectedDate: state.moneySelectedDate }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
   return `<header class="screen-header">
@@ -332,6 +334,7 @@ async function deleteItem(kind, id) {
 function shiftMoneyMonth(delta){
   const [year,month]=state.moneyMonth.split("-").map(Number);
   state.moneyMonth=dateKey(new Date(year,month-1+delta,1)).slice(0,7);
+  state.moneySelectedDate=null;
   render();
 }
 
@@ -435,6 +438,9 @@ root.addEventListener("click", async (event) => {
     else if (action === "next-month") changeMonth(1);
     else if (action === "select-day") { state.selectedDate = button.dataset.date; state.year = Number(state.selectedDate.slice(0,4)); state.month = Number(state.selectedDate.slice(5,7))-1; render(); }
     else if (action === "money-mode") { state.moneyMode = button.dataset.mode; render(); }
+    else if (action === "money-ledger-view") { state.moneyLedgerView = button.dataset.view; render(); }
+    else if (action === "money-select-day") { state.moneySelectedDate = button.dataset.date; state.moneyMonth = state.moneySelectedDate.slice(0, 7); render(); }
+    else if (action === "money-clear-day") { state.moneySelectedDate = null; render(); }
     else if (action === "money-prev-month") shiftMoneyMonth(-1);
     else if (action === "money-next-month") shiftMoneyMonth(1);
     else if (action === "money-edit-wallet") openMoneyEditor("wallet");

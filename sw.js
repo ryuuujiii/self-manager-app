@@ -1,12 +1,12 @@
-const CACHE_NAME = "self-manager-v4";
+const CACHE_NAME = "self-manager-v5";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=3",
-  "./src/app.js?v=3",
+  "./styles.css?v=4",
+  "./src/app.js?v=4",
   "./src/db.js?v=3",
   "./src/money.js",
-  "./src/money-ui.js",
+  "./src/money-ui.js?v=4",
   "./src/domain.js",
   "./src/icons.js",
   "./manifest.webmanifest",

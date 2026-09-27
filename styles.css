@@ -246,3 +246,29 @@ svg { flex: none; }
 .fixed-due .todo-check { flex: none; }
 .fixed-due .money-record-main { padding: 9px 0; }
 .money-screen .field-help { margin: 8px 0 0; }
+
+.ledger-views { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ledger-month-card { padding-top: 4px; padding-bottom: 4px; }
+.ledger-month-card .month-control { margin: 0; }
+.ledger-calendar-card { overflow: hidden; padding: 0; }
+.ledger-weekdays, .ledger-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ledger-weekdays { background: #edf4ee; }
+.ledger-weekdays span { padding: 7px 0; color: #73877a; font-size: 10px; font-weight: 800; text-align: center; }
+.ledger-weekdays span:nth-child(6) { color: #359dc0; }
+.ledger-weekdays span:nth-child(7) { color: #df7771; }
+.ledger-day { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 58px; padding: 5px 2px 4px 4px; border: 0; border-right: 1px solid #e6ede7; border-bottom: 1px solid #e6ede7; border-radius: 0; background: #fff; text-align: left; }
+.ledger-day:nth-child(7n) { border-right: 0; }
+.ledger-day.outside { background: #f7f9f7; opacity: .58; }
+.ledger-day.selected { outline: 2px solid #0bb277; outline-offset: -2px; background: #eafaf2; }
+.ledger-date { color: #65776d; font-size: 11px; font-weight: 800; line-height: 1; }
+.ledger-day-amount { width: 100%; overflow: hidden; font-size: clamp(8px, 2.45vw, 11px); font-weight: 750; line-height: 1.1; letter-spacing: -.04em; text-overflow: clip; white-space: nowrap; }
+.ledger-day-amount.income, .ledger-legend .income, .ledger-group-heading .income { color: #209cc5; }
+.ledger-day-amount.expense, .ledger-legend .expense, .ledger-group-heading .expense { color: #dc794d; }
+.ledger-legend { display: flex; justify-content: flex-end; gap: 12px; padding: 7px 10px; font-size: 10px; font-weight: 750; }
+.ledger-summary { flex-wrap: nowrap; }
+.ledger-summary > div { flex-basis: 0; padding: 9px 7px; }
+.ledger-summary b { font-size: clamp(11px, 3vw, 16px); }
+.ledger-clear { margin: 0 0 8px; }
+.ledger-group + .ledger-group { margin-top: 10px; }
+.ledger-group-heading { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #edf3ed; font-size: 11px; }
+.ledger-group-heading span { font-weight: 800; }

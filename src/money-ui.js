@@ -1,5 +1,5 @@
 import { MONEY_CATEGORIES, cashBalance, fixedCostSummary, monthSummary } from "./money.js";
-import { dateKey } from "./domain.js";
+import { dateKey, formatDay, monthGrid } from "./domain.js";
 import { icon } from "./icons.js";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
@@ -15,8 +15,71 @@ export function transactionRow(item){const plus=item.type==="income";return `<bu
 
 export function renderWallet(data){const balance=cashBalance(data.wallet,data.transactions),month=data.month;const cash=data.transactions.filter((item)=>item.paymentMethod==="cash").sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));const summary=monthSummary(cash,month);return `<section class="wallet-hero"><span>${icon("wallet",27)} 現金の財布</span><strong>${yen(balance)}</strong><small>初期残高と現金の収支から計算</small><button data-action="money-edit-wallet">${data.wallet?"初期残高を変更":"初期残高を設定"}</button></section><div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus",17)} 支出を記録</button><button class="secondary-button" data-action="money-add-transaction" data-type="income">${icon("plus",17)} 収入を記録</button></div><section class="content-card"><div class="section-heading"><h2>${moneyMonthLabel(month)}の現金収支</h2></div><div class="money-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div></div></section><section class="content-card"><div class="section-heading"><h2>最近の現金の記録</h2></div>${cash.length?cash.slice(0,8).map(transactionRow).join(""):`<p class="settings-copy">現金の支出・収入を記録すると、財布残高に反映されます。</p>`}</section>`;}
 
-export function renderLedger(data){const summary=monthSummary(data.transactions,data.month);const sorted=[...summary.records].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));const categories=Object.entries(MONEY_CATEGORIES).map(([key,label])=>({label,amount:sorted.filter((item)=>item.type==="expense"&&item.category===key).reduce((sum,item)=>sum+item.amount,0)})).filter((item)=>item.amount>0).sort((a,b)=>b.amount-a.amount);return `<section class="content-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="money-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div><div><span>収支</span><b>${yen(summary.net)}</b></div></div><p class="field-help">現金以外の記録も含みます。現金以外は財布残高を変えません。</p></section><div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus",17)} 支出</button><button class="secondary-button" data-action="money-add-transaction" data-type="income">${icon("plus",17)} 収入</button></div><section class="content-card"><div class="section-heading"><h2>支出カテゴリ</h2></div>${categories.length?categories.map((item)=>`<div class="money-category"><span>${escapeMoney(item.label)}</span><strong>${yen(item.amount)}</strong></div>`).join(""):`<p class="settings-copy">この月の支出はありません。</p>`}</section><section class="content-card"><div class="section-heading"><h2>収支の記録</h2><span class="section-count">${sorted.length}件</span></div>${sorted.length?sorted.map(transactionRow).join(""):`<p class="settings-copy">この月の記録はありません。</p>`}</section>`;}
 
+export function renderLedgerCalendar(data, summary) {
+  const [year, month] = data.month.split("-").map(Number);
+  const daily = new Map();
+  for (const item of data.transactions) {
+    const value = daily.get(item.date) || { income: 0, expense: 0 };
+    value[item.type] += item.amount;
+    daily.set(item.date, value);
+  }
+  const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
+  const cells = monthGrid(year, month - 1).map((date) => {
+    const value = daily.get(date) || { income: 0, expense: 0 };
+    const current = date.slice(0, 7) === data.month;
+    const selected = date === data.selectedDate;
+    return `<button class="ledger-day ${current ? "" : "outside"} ${selected ? "selected" : ""}" data-action="money-select-day" data-date="${date}" aria-label="${date} 収入${yen(value.income)} 支出${yen(value.expense)}" aria-pressed="${selected}">
+      <span class="ledger-date">${Number(date.slice(-2))}</span>
+      <span class="ledger-day-amount income">${value.income ? new Intl.NumberFormat("ja-JP").format(value.income) : "&nbsp;"}</span>
+      <span class="ledger-day-amount expense">${value.expense ? new Intl.NumberFormat("ja-JP").format(value.expense) : "&nbsp;"}</span>
+    </button>`;
+  }).join("");
+  const sorted = [...summary.records].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  const visible = data.selectedDate ? sorted.filter((item) => item.date === data.selectedDate) : sorted;
+  const groups = new Map();
+  for (const item of visible) {
+    if (!groups.has(item.date)) groups.set(item.date, []);
+    groups.get(item.date).push(item);
+  }
+  const records = [...groups].map(([date, items]) => {
+    const net = items.reduce((sum, item) => sum + (item.type === "income" ? item.amount : -item.amount), 0);
+    return `<div class="ledger-group"><div class="ledger-group-heading"><strong>${formatDay(date, { year: "numeric", month: "long", day: "numeric", weekday: "short" })}</strong><span class="${net >= 0 ? "income" : "expense"}">${net >= 0 ? "+" : "−"}${yen(Math.abs(net))}</span></div>${items.map(transactionRow).join("")}</div>`;
+  }).join("");
+  return `<section class="content-card ledger-calendar-card">
+    <div class="ledger-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div>
+    <div class="ledger-grid">${cells}</div>
+    <div class="ledger-legend"><span class="income">● 収入</span><span class="expense">● 支出</span></div>
+  </section>
+  <section class="content-card"><div class="money-summary ledger-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div><div><span>収支</span><b>${summary.net < 0 ? "−" : "+"}${yen(Math.abs(summary.net))}</b></div></div><p class="field-help">現金以外も含む収支です。財布残高は現金の記録だけで変わります。</p></section>
+  <section class="content-card"><div class="section-heading"><h2>${data.selectedDate ? "選んだ日の明細" : "日付別の明細"}</h2><span class="section-count">${visible.length}件</span></div>
+  ${data.selectedDate ? `<button class="text-link ledger-clear" data-action="money-clear-day">月の全件を見る</button>` : ""}
+  ${records || `<p class="settings-copy">${data.selectedDate ? "この日の記録はありません。" : "この月の記録はありません。"}</p>`}</section>`;
+}
+
+export function renderLedger(data) {
+  const summary = monthSummary(data.transactions, data.month);
+  const sorted = [...summary.records].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  const categories = Object.entries(MONEY_CATEGORIES).map(([key, label]) => ({
+    label,
+    amount: sorted.filter((item) => item.type === "expense" && item.category === key).reduce((sum, item) => sum + item.amount, 0)
+  })).filter((item) => item.amount > 0).sort((a, b) => b.amount - a.amount);
+  const view = data.ledgerView || "calendar";
+  const list = `<section class="content-card"><div class="section-heading"><h2>支出カテゴリ</h2></div>${categories.length ? categories.map((item) => `<div class="money-category"><span>${escapeMoney(item.label)}</span><strong>${yen(item.amount)}</strong></div>`).join("") : `<p class="settings-copy">この月の支出はありません。</p>`}</section>
+    <section class="content-card"><div class="section-heading"><h2>収支の記録</h2><span class="section-count">${sorted.length}件</span></div>${sorted.length ? sorted.map(transactionRow).join("") : `<p class="settings-copy">この月の記録はありません。</p>`}</section>`;
+  return `<div class="segmented ledger-views" role="tablist" aria-label="家計簿の表示">
+    <button role="tab" aria-selected="${view === "calendar"}" class="${view === "calendar" ? "active" : ""}" data-action="money-ledger-view" data-view="calendar">カレンダー</button>
+    <button role="tab" aria-selected="${view === "list"}" class="${view === "list" ? "active" : ""}" data-action="money-ledger-view" data-view="list">一覧</button>
+  </div>
+  <section class="content-card ledger-month-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft", 20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron", 20)}</button></div></section>
+
+  <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 支出</button><button class="secondary-button" data-action="money-add-transaction" data-type="income">${icon("plus", 17)} 収入</button></div>
+  ${view === "calendar" ? renderLedgerCalendar(data, summary) : ""}
+
+
+  ${view === "list" ? `  <section class="content-card"><div class="money-summary ledger-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div><div><span>収支</span><b>${summary.net < 0 ? "−" : "+"}${yen(Math.abs(summary.net))}</b></div></div><p class="field-help">現金以外も含む収支です。財布残高は現金の記録だけで変わります。</p></section>` : ""}
+  ${view === "list" ? list : ""}`;
+}
 export function renderFixed(data){const summary=fixedCostSummary(data.fixedCosts,data.month);const due=[...summary.due].sort((a,b)=>a.dueDate.localeCompare(b.dueDate));return `<section class="content-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="money-summary"><div><span>今月の支払予定</span><b>${yen(summary.dueTotal)}</b></div><div><span>支払い済み</span><b class="income">${yen(summary.paidTotal)}</b></div><div><span>月あたり目安</span><b>${yen(summary.monthlyEquivalent)}</b></div></div><p class="field-help">年額は12分割して月あたり目安に含めます。支払い済みにしても財布残高は変わりません。</p></section><button class="primary-button money-add" data-action="money-add-fixed">${icon("plus",17)} 固定費・サブスクを追加</button><section class="content-card"><div class="section-heading"><h2>今月の支払日</h2><span class="section-count">${due.length}件</span></div>${due.length?due.map(({record,dueDate})=>`<div class="fixed-due"><button class="todo-check ${record.paidDates?.includes(dueDate)?"checked":""}" data-action="money-toggle-fixed" data-id="${escapeMoney(record.id)}" data-date="${dueDate}" aria-label="${record.paidDates?.includes(dueDate)?"未払いに戻す":"支払い済みにする"}: ${escapeMoney(record.title)}">${record.paidDates?.includes(dueDate)?icon("check",15):""}</button><button class="money-record-main" data-action="money-edit-fixed" data-id="${escapeMoney(record.id)}"><strong>${escapeMoney(record.title)}</strong><small>${escapeMoney(dueDate)} · ${record.cadence==="monthly"?"月額":"年額"}</small></button><b>${yen(record.amount)}</b></div>`).join(""):`<p class="settings-copy">この月の支払い予定はありません。</p>`}</section><section class="content-card"><div class="section-heading"><h2>登録済みの固定費・サブスク</h2></div>${data.fixedCosts.length?[...data.fixedCosts].sort((a,b)=>a.title.localeCompare(b.title,"ja")).map((item)=>`<button class="money-record" data-action="money-edit-fixed" data-id="${escapeMoney(item.id)}"><span class="money-record-icon">${icon("calendar",18)}</span><span class="money-record-main"><strong>${escapeMoney(item.title)}</strong><small>${item.cadence==="monthly"?"毎月":"毎年"}${item.paymentDay}日 · ${escapeMoney(MONEY_CATEGORIES[item.category])}</small></span><b>${yen(item.amount)}</b></button>`).join(""):`<p class="settings-copy">まだ登録されていません。</p>`}</section>`;}
 
 export function renderMoneyScreen(data){const modes=[["wallet","財布"],["ledger","家計簿"],["fixed","固定費"]];return `<div class="screen money-screen">${moneyHeader()}<main class="screen-content"><div class="segmented money-modes" role="tablist" aria-label="お金の表示">${modes.map(([key,label])=>`<button role="tab" aria-selected="${data.mode===key}" class="${data.mode===key?"active":""}" data-action="money-mode" data-mode="${key}">${label}</button>`).join("")}</div>${data.mode==="wallet"?renderWallet(data):data.mode==="ledger"?renderLedger(data):renderFixed(data)}</main></div>`;}
