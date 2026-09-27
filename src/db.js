@@ -1,8 +1,9 @@
 import { validateEvent, validateTodo } from "./domain.js";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js";
 
 const DB_NAME = "self-manager";
-const DB_VERSION = 1;
-const STORES = ["events", "todos"];
+const DB_VERSION = 2;
+const STORES = ["events", "todos", "wallets", "transactions", "fixedCosts"];
 
 function requestResult(request) {
   return new Promise((resolve, reject) => {
@@ -55,30 +56,30 @@ export async function deleteRecord(db, store, id) {
   await done;
 }
 
-export async function exportBackup(db) {
-  const [events, todos] = await Promise.all(STORES.map((store) => getAll(db, store)));
-  return { format: "self-manager-backup", version: 1, exportedAt: new Date().toISOString(), events, todos };
+export function exportBackup(db) {
+  return Promise.all(STORES.map((store)=>getAll(db,store))).then(([events,todos,wallets,transactions,fixedCosts])=>({format:"self-manager-backup",version:2,exportedAt:new Date().toISOString(),events,todos,wallets,transactions,fixedCosts}));
 }
 
 export function validateBackup(value) {
-  if (!value || value.format !== "self-manager-backup" || value.version !== 1 || !Array.isArray(value.events) || !Array.isArray(value.todos)) {
-    throw new Error("このアプリのバックアップ形式ではありません。");
-  }
-  if (value.events.length + value.todos.length > 10000) throw new Error("バックアップの件数が多すぎます。");
-  for (const event of value.events) {
-    if (typeof event.id !== "string" || validateEvent(event)) throw new Error("バックアップ内の予定データが不正です。");
-  }
-  for (const todo of value.todos) {
-    if (typeof todo.id !== "string" || validateTodo(todo)) throw new Error("バックアップ内のToDoデータが不正です。");
+  if(!value||value.format!=="self-manager-backup"||![1,2].includes(value.version)||!Array.isArray(value.events)||!Array.isArray(value.todos))throw new Error("このアプリのバックアップ形式ではありません。");
+  if(value.version===2&&(!Array.isArray(value.wallets)||!Array.isArray(value.transactions)||!Array.isArray(value.fixedCosts)))throw new Error("お金のバックアップ形式が不正です。");
+  const count=value.events.length+value.todos.length+(value.wallets?.length||0)+(value.transactions?.length||0)+(value.fixedCosts?.length||0);
+  if(count>10000||value.wallets?.length>1)throw new Error("バックアップの件数が多すぎます。");
+  for(const event of value.events)if(typeof event.id!=="string"||validateEvent(event))throw new Error("バックアップ内の予定データが不正です。");
+  for(const todo of value.todos)if(typeof todo.id!=="string"||validateTodo(todo))throw new Error("バックアップ内のToDoデータが不正です。");
+  if(value.version===2){
+    for(const wallet of value.wallets)if(validateWallet(wallet))throw new Error("バックアップ内の財布データが不正です。");
+    for(const item of value.transactions)if(typeof item.id!=="string"||validateTransaction(item))throw new Error("バックアップ内の家計簿データが不正です。");
+    for(const item of value.fixedCosts)if(typeof item.id!=="string"||validateFixedCost(item))throw new Error("バックアップ内の固定費データが不正です。");
   }
   return value;
 }
 
-export async function importBackup(db, data) {
+export function importBackup(db,data) {
   validateBackup(data);
-  const transaction = db.transaction(STORES, "readwrite");
-  const done = transactionDone(transaction);
-  for (const event of data.events) transaction.objectStore("events").put(event);
-  for (const todo of data.todos) transaction.objectStore("todos").put(todo);
-  await done;
+  const names=data.version===1?["events","todos"]:STORES;
+  const transaction=db.transaction(names,"readwrite");
+  const done=transactionDone(transaction);
+  for(const name of names)for(const record of (data[name]||[]))transaction.objectStore(name).put(record);
+  return done;
 }

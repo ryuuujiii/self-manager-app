@@ -218,3 +218,31 @@ svg { flex: none; }
 .reminder-icon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; color: #10a771; background: #e8f7ee; }
 .reminder-row em { padding: 4px 7px; border-radius: 7px; color: #71877b; background: #eff3f0; font-size: 10px; font-style: normal; font-weight: 800; }
 .reminder-row em.due { color: #ce6565; background: #fff0f0; }
+
+.money-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wallet-hero { display: grid; justify-items: start; gap: 8px; padding: 22px; border-radius: 21px; color: white; background: linear-gradient(125deg,#11af72,#078e66); box-shadow: 0 10px 24px #0c9f6a29; }
+.wallet-hero > span { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 800; }
+.wallet-hero strong { font-size: clamp(30px,9vw,39px); letter-spacing: -.05em; }
+.wallet-hero small { opacity: .84; font-size: 11px; }
+.wallet-hero button { margin-top: 6px; padding: 8px 12px; border: 1px solid #ffffff73; border-radius: 9px; color: white; background: #ffffff23; font-size: 11px; font-weight: 800; }
+.money-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.money-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.money-summary > div { display: grid; flex: 1 1 95px; gap: 6px; min-width: 0; padding: 12px; border-radius: 11px; background: #f4f8f5; }
+.money-summary span { color: #83958a; font-size: 10px; font-weight: 700; }
+.money-summary b { color: #284439; font-size: clamp(13px,3.7vw,17px); white-space: nowrap; }
+.money-summary b.income, .money-record b.income { color: #0ba678; }
+.money-summary b.expense, .money-record b.expense { color: #e36c68; }
+.money-record { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 58px; padding: 9px 0; border: 0; border-top: 1px solid #edf2ee; background: none; text-align: left; }
+.money-record-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #129c70; background: #e7f7ee; }
+.money-record-icon.expense { color: #e17167; background: #fff0ec; }
+.money-record-main { display: grid; flex: 1; min-width: 0; gap: 4px; border: 0; background: none; text-align: left; }
+.money-record-main strong { overflow: hidden; color: #2f4037; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.money-record-main small { overflow: hidden; color: #899b8f; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.money-record b, .fixed-due b { color: #31473b; font-size: 12px; white-space: nowrap; }
+.money-category { display: flex; justify-content: space-between; gap: 10px; padding: 9px 1px; border-top: 1px solid #edf2ee; font-size: 12px; }
+.money-category strong { color: #334d3e; }
+.money-add { width: 100%; }
+.fixed-due { display: flex; align-items: center; gap: 10px; min-height: 58px; border-top: 1px solid #edf2ee; }
+.fixed-due .todo-check { flex: none; }
+.fixed-due .money-record-main { padding: 9px 0; }
+.money-screen .field-help { margin: 8px 0 0; }
