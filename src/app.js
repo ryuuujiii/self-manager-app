@@ -2,7 +2,7 @@ import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, mon
 import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=3";
 import { icon } from "./icons.js";
 import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=4";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=5";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -22,7 +22,6 @@ const state = {
   transactions: [],
   fixedCosts: [],
   moneyMode: "wallet",
-  moneyLedgerView: "calendar",
   moneySelectedDate: null,
   moneyMonth: dateKey().slice(0, 7),
   moneyEditor: null,
@@ -65,7 +64,7 @@ async function refresh() {
   render();
 }
 
-function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth, ledgerView: state.moneyLedgerView, selectedDate: state.moneySelectedDate }; }
+function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
   return `<header class="screen-header">
@@ -107,7 +106,7 @@ function renderHome() {
         ${summary.todayTodos.length ? summary.todayTodos.slice(0, 5).map((todo) => renderTodoRow(todo, false)).join("") : `<div class="empty-inline"><span class="empty-icon pink">${icon("check", 22)}</span><p>今日のToDoはありません</p></div>`}
         <button class="inline-add" data-action="add-todo">${icon("plus", 17)} ToDoを追加</button>
       </section>
-      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">MONEY</span><h2>お金</h2></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の支出</span><b class="expense">${yen(monthSummary(state.transactions, today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
+      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">MONEY</span><h2>お金</h2></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
     </main>
   </div>`;
 }
@@ -339,7 +338,7 @@ function shiftMoneyMonth(delta){
 }
 
 function openMoneyEditor(kind,id=null,type="expense"){
-  state.moneyEditor={kind,id,type};render();
+  state.moneyEditor={kind,id,type,cashOnly:kind==="transaction"&&state.moneyMode==="wallet"};render();
 }
 
 function closeMoneyEditor(){
@@ -438,7 +437,6 @@ root.addEventListener("click", async (event) => {
     else if (action === "next-month") changeMonth(1);
     else if (action === "select-day") { state.selectedDate = button.dataset.date; state.year = Number(state.selectedDate.slice(0,4)); state.month = Number(state.selectedDate.slice(5,7))-1; render(); }
     else if (action === "money-mode") { state.moneyMode = button.dataset.mode; render(); }
-    else if (action === "money-ledger-view") { state.moneyLedgerView = button.dataset.view; render(); }
     else if (action === "money-select-day") { state.moneySelectedDate = button.dataset.date; state.moneyMonth = state.moneySelectedDate.slice(0, 7); render(); }
     else if (action === "money-clear-day") { state.moneySelectedDate = null; render(); }
     else if (action === "money-prev-month") shiftMoneyMonth(-1);
