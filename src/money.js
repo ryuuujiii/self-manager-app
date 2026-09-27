@@ -2,6 +2,8 @@ import { addDays, dateKey, isValidDateKey } from "./domain.js";
 export const MONEY_CATEGORIES = {"food":"食費","transport":"交通","daily":"日用品","dining":"外食","leisure":"娯楽","housing":"住居","utilities":"光熱・通信","subscription":"サブスク","salary":"給与","other":"その他"};
 export function validateWallet(value){
   if(value.id!=="cash"||!Number.isSafeInteger(value.openingBalance)||value.openingBalance<0||value.openingBalance>1e10)return "初期残高は0円以上の整数で入力してください。";
+  if(value.salaryDay!=null&&(!Number.isInteger(value.salaryDay)||value.salaryDay<1||value.salaryDay>31))return "給料日は1〜31日で指定してください。";
+  if(value.holidayShift!=null&&!["previous","next"].includes(value.holidayShift))return "土日・祝日の調整方法を選んでください。";
   return null;
 }
 

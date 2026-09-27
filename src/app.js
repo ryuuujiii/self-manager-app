@@ -1,8 +1,9 @@
 import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js";
-import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=3";
+import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=6";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=5";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=6";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=6";
+import { payPeriodForDate } from "./pay-cycle.js?v=6";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -24,6 +25,7 @@ const state = {
   moneyMode: "wallet",
   moneySelectedDate: null,
   moneyMonth: dateKey().slice(0, 7),
+  moneyMonthInitialized: false,
   moneyEditor: null,
   tab: "home",
   page: null,
@@ -61,6 +63,7 @@ function toast(message, isError = false) {
 
 async function refresh() {
   [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts"].map((store) => getAll(state.db, store)));
+  if (!state.moneyMonthInitialized) { state.moneyMonth = payPeriodForDate(dateKey(), state.wallets.find((item) => item.id === "cash")); state.moneyMonthInitialized = true; }
   render();
 }
 
@@ -357,11 +360,15 @@ async function toggleFixedPaid(id,date){
 async function saveMoneyForm(form){
   if(state.busy)return;
   const {kind,id}=form.dataset,fields=new FormData(form),now=new Date().toISOString();
-  const existing=kind==="wallet"?moneyData().wallet:id?(kind==="transaction"?state.transactions:state.fixedCosts).find((item)=>item.id===id):null;
-  const common={id:kind==="wallet"?"cash":existing?.id||crypto.randomUUID(),createdAt:existing?.createdAt||now,updatedAt:now};
+  const existing=(kind==="wallet"||kind==="payday")?moneyData().wallet:id?(kind==="transaction"?state.transactions:state.fixedCosts).find((item)=>item.id===id):null;
+  const common={id:(kind==="wallet"||kind==="payday")?"cash":existing?.id||crypto.randomUUID(),createdAt:existing?.createdAt||now,updatedAt:now};
   let record,store,error;
   if(kind==="wallet"){
-    record={...common,openingBalance:Number(fields.get("openingBalance"))};
+    record={...existing,...common,openingBalance:Number(fields.get("openingBalance"))};
+    store="wallets";error=validateWallet(record);
+  }else if(kind==="payday"){
+    const raw=String(fields.get("salaryDay")||"").trim();
+    record={...existing,...common,openingBalance:existing?.openingBalance??0,salaryDay:raw?Number(raw):null,holidayShift:String(fields.get("holidayShift")||"previous")};
     store="wallets";error=validateWallet(record);
   }else if(kind==="transaction"){
     record={...common,type:String(fields.get("type")||""),amount:Number(fields.get("amount")),date:String(fields.get("date")||""),category:String(fields.get("category")||""),paymentMethod:String(fields.get("paymentMethod")||""),note:String(fields.get("note")||"").trim()};
@@ -376,6 +383,7 @@ async function saveMoneyForm(form){
   state.busy=true;
   try{
     await putRecord(state.db,store,record);
+    if(kind==="payday"){state.moneyMonth=payPeriodForDate(dateKey(),record);state.moneySelectedDate=null;}
     state.moneyEditor=null;
     await refresh();
     toast(existing?"変更を保存しました。":"登録しました。");
@@ -412,6 +420,7 @@ async function loadBackup(file) {
   const data = JSON.parse(await file.text());
   if (!window.confirm("バックアップを読み込みますか？同じIDの予定・ToDo・お金の記録はファイルの内容で更新されます。")) return;
   await importBackup(state.db, data);
+  state.moneyMonthInitialized=false;
   await refresh();
   toast("バックアップを読み込みました。");
 }
@@ -437,11 +446,12 @@ root.addEventListener("click", async (event) => {
     else if (action === "next-month") changeMonth(1);
     else if (action === "select-day") { state.selectedDate = button.dataset.date; state.year = Number(state.selectedDate.slice(0,4)); state.month = Number(state.selectedDate.slice(5,7))-1; render(); }
     else if (action === "money-mode") { state.moneyMode = button.dataset.mode; render(); }
-    else if (action === "money-select-day") { state.moneySelectedDate = button.dataset.date; state.moneyMonth = state.moneySelectedDate.slice(0, 7); render(); }
+    else if (action === "money-select-day") { state.moneySelectedDate = button.dataset.date; state.moneyMonth = payPeriodForDate(state.moneySelectedDate, moneyData().wallet); render(); }
     else if (action === "money-clear-day") { state.moneySelectedDate = null; render(); }
     else if (action === "money-prev-month") shiftMoneyMonth(-1);
     else if (action === "money-next-month") shiftMoneyMonth(1);
     else if (action === "money-edit-wallet") openMoneyEditor("wallet");
+    else if (action === "money-edit-payday") openMoneyEditor("payday");
     else if (action === "money-add-transaction") openMoneyEditor("transaction", null, button.dataset.type);
     else if (action === "money-edit-transaction") openMoneyEditor("transaction", button.dataset.id);
     else if (action === "money-add-fixed") openMoneyEditor("fixed");

@@ -272,3 +272,14 @@ svg { flex: none; }
 .ledger-group + .ledger-group { margin-top: 10px; }
 .ledger-group-heading { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #edf3ed; font-size: 11px; }
 .ledger-group-heading span { font-weight: 800; }
+
+.wallet-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.wallet-hero-actions button { margin-top: 5px; }
+.pay-period-card .month-control { margin: 0; }
+.pay-period-range { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 3px 0 8px; color: #244b3b; font-size: 15px; font-weight: 850; }
+.pay-period-range span { padding: 4px 7px; border-radius: 7px; color: #0d9d6a; background: #e6f8ef; font-size: 10px; white-space: nowrap; }
+.pay-period-note { margin: 3px 0; color: #75897c; font-size: 10px; line-height: 1.5; }
+.pay-period-warning { margin: 7px 0 0; color: #a86627; font-size: 10px; line-height: 1.5; }
+.ledger-day.closing { background: #fff8e9; }
+.ledger-day.payday .ledger-date { color: #0aa879; }
+.ledger-day.selected { background: #eafaf2; }

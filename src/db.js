@@ -1,5 +1,5 @@
 import { validateEvent, validateTodo } from "./domain.js";
-import { validateFixedCost, validateTransaction, validateWallet } from "./money.js";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=6";
 
 const DB_NAME = "self-manager";
 const DB_VERSION = 2;
