@@ -1,11 +1,13 @@
-import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=9";
-import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=9";
+import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=10";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=10";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=9";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=9";
-import { payPeriodForDate } from "./pay-cycle.js?v=9";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=9";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=9";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=10";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=10";
+import { payPeriodForDate } from "./pay-cycle.js?v=10";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=10";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=10";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=10";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=10";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -26,6 +28,15 @@ const state = {
   fixedCosts: [],
   workplaces: [],
   workShifts: [],
+  habits: [],
+  habitRecords: [],
+  checklists: [],
+  shoppingItems: [],
+  wishlistItems: [],
+  memos: [],
+  lifeMode: "today",
+  activeChecklistId: null,
+  lifeEditor: null,
   workMode: "month",
   workMonth: dateKey().slice(0, 7),
   workMonthInitialized: false,
@@ -72,7 +83,7 @@ function toast(message, isError = false) {
 }
 
 async function refresh() {
-  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.workplaces, state.workShifts] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "workplaces", "workShifts"].map((store) => getAll(state.db, store)));
+  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.workplaces, state.workShifts, state.habits, state.habitRecords, state.checklists, state.shoppingItems, state.wishlistItems, state.memos] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "workplaces", "workShifts", "habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos"].map((store) => getAll(state.db, store)));
   if (!state.moneyMonthInitialized) { state.moneyMonth = payPeriodForDate(dateKey(), state.wallets.find((item) => item.id === "cash")); state.moneyMonthInitialized = true; }
   if (!state.workplaces.some((item) => item.id === state.workWorkplaceId)) state.workWorkplaceId = state.workplaces[0]?.id || null;
   if (!state.workMonthInitialized) { state.workMonth = workPeriodForDate(dateKey(), state.workplaces.find((item) => item.id === state.workWorkplaceId)); state.workMonthInitialized = true; }
@@ -81,6 +92,7 @@ async function refresh() {
 
 function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
 function workData() { return { workplaces: state.workplaces, shifts: state.workShifts, workplaceId: state.workWorkplaceId, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
+function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
   return `<header class="screen-header">
@@ -100,6 +112,8 @@ function renderHome() {
   const summary = homeSummary(state.events, state.todos, today);
   const completedCount = summary.todayTodos.filter((item) => item.completedAt).length;
   const upcomingShift = nextShift(state.workShifts);
+  const dueHabits = state.habits.filter((habit) => habitDueOn(habit, today));
+  const doneHabits = dueHabits.filter((habit) => habitProgress(habit, state.habitRecords, today).todayDone).length;
   return `<div class="screen home-screen">
     ${header({
       eyebrow: `${formatDay(today, { year: "numeric", month: "long", day: "numeric" })}（${weekdayLabel(today)}）`,
@@ -125,6 +139,7 @@ function renderHome() {
       </section>
       <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">WORK</span><h2>次の仕事</h2></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${upcomingShift ? renderShiftAgendaRow(upcomingShift) : '<div class="empty-inline"><span class="empty-icon blue">' + icon("work", 22) + '</span><p>今後のシフトはありません</p></div>'}</section>
       <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">MONEY</span><h2>お金</h2></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
+      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">LIFE</span><h2>今日の習慣</h2></div><button class="text-link" data-action="goto-life">生活を見る ${icon("chevron", 14)}</button></div><div class="life-home-summary"><strong>${doneHabits}/${dueHabits.length}</strong><span>今日の習慣を達成</span></div>${dueHabits.length ? dueHabits.slice(0, 3).map((habit) => `<div class="life-home-item">${habitProgress(habit, state.habitRecords, today).todayDone ? "✓" : "○"} ${escapeHTML(habit.title)}</div>`).join("") : '<p class="life-note">習慣を登録すると、ここでも確認できます。</p>'}</section>
     </main>
   </div>`;
 }
@@ -204,18 +219,6 @@ function renderSchedule() {
   return `<div class="screen schedule-screen">${header({eyebrow:"予定とやることをひとつに",title:"予定",actions:`<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell",21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings",21)}</button>`})}<main class="screen-content"><div class="segmented schedule-modes" role="tablist" aria-label="予定の表示">${modes.map(([mode,label])=>`<button role="tab" aria-selected="${state.scheduleMode===mode}" class="${state.scheduleMode===mode?"active":""}" data-action="mode" data-mode="${mode}">${label}</button>`).join("")}</div>${state.scheduleMode==="calendar"?renderCalendar():state.scheduleMode==="week"?renderWeek():state.scheduleMode==="day"?renderDay():state.scheduleMode==="list"?renderEventList():renderTodoList()}<div class="schedule-actions"><button class="secondary-button" data-action="add-todo">${icon("plus",18)} ToDo</button><button class="primary-button" data-action="add-event">${icon("plus",18)} 予定を追加</button></div></main></div>`;
 }
 
-function renderFutureTab(kind) {
-  const info = {
-    money: { title: "お金", icon: "money", sub: "現金と毎月のお金を見える化", features: ["財布の現金残高", "家計簿の収支", "固定費・サブスク"] },
-    work: { title: "仕事", icon: "work", sub: "シフトと給料見込みをまとめて管理", features: ["勤務先を登録", "シフトを登録", "勤務時間と給料見込み"] },
-    life: { title: "生活", icon: "life", sub: "毎日の暮らしを整える", features: ["習慣・ルーティン", "持ち物・買い物", "ほしい物・メモ"] }
-  }[kind];
-  return `<div class="screen future-screen">
-    ${header({ eyebrow: info.sub, title: info.title, actions: `<button class="icon-button" data-action="settings" aria-label="設定">${icon("settings", 21)}</button>` })}
-    <main class="screen-content"><div class="future-hero"><span class="future-icon">${icon(info.icon, 38)}</span><span class="section-kicker green">COMING IN THE NEXT PHASE</span><h2>${info.title}の管理</h2><p>この機能は今後追加します。登録済みの情報をほかの機能にも活かせる形で準備しています。</p></div><div class="content-card"><div class="section-heading"><h2>追加予定の機能</h2></div>${info.features.map((feature) => `<div class="future-item"><span>${icon("check", 16)}</span>${escapeHTML(feature)}</div>`).join("")}</div></main>
-  </div>`;
-}
-
 function renderReminders() {
   const now=new Date(),items=[...remindersForWindow(state.events,state.todos,now),...fixedCostReminders(state.fixedCosts,now)].sort((a,b)=>a.triggerAt-b.triggerAt);
   const due=items.filter((item)=>item.triggerAt<=now),upcoming=items.filter((item)=>item.triggerAt>now);
@@ -227,13 +230,13 @@ function renderSettings() {
   return `<div class="screen settings-screen">
     ${header({ title: "設定", back: true })}
     <main class="screen-content">
-      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">YOUR DATA</span><h2>バックアップ</h2></div></div><p class="settings-copy">予定・ToDo・お金・仕事の記録は、この端末のブラウザ内に保存されます。端末の変更やブラウザデータの削除に備えて、定期的にファイルを書き出してください。</p>
+      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">YOUR DATA</span><h2>バックアップ</h2></div></div><p class="settings-copy">予定・ToDo・お金・仕事・生活の記録は、この端末のブラウザ内に保存されます。端末の変更やブラウザデータの削除に備えて、定期的にファイルを書き出してください。</p>
         <button class="settings-action" data-action="export">${icon("download", 20)}<span><strong>バックアップを書き出す</strong><small>JSONファイルとして保存</small></span>${icon("chevron", 17)}</button>
         <button class="settings-action" data-action="import">${icon("upload", 20)}<span><strong>バックアップを読み込む</strong><small>同じIDのデータはファイルの内容で更新</small></span>${icon("chevron", 17)}</button>
         <input id="backup-file" type="file" accept="application/json,.json" hidden />
       </section>
       <div class="privacy-note">${icon("wallet", 18)}<p>このアプリは現在、サーバーへ個人データを送信しません。バックアップの保管場所はご自身で選べます。</p></div>
-      <p class="version-label">自分管理 · Phase 4</p>
+      <p class="version-label">自分管理 · Phase 5</p>
     </main>
   </div>`;
 }
@@ -245,7 +248,7 @@ function categoryOptions(selected) {
 function renderEditor() {
   if (!state.editor) return "";
   const { kind, id } = state.editor;
-  const item = id ? (kind === "event" ? state.events : state.todos).find((record) => record.id === id) : null;
+  const item = id ? (kind === "event" ? state.events : state.todos).find((record) => record.id === id) : state.editor.draft;
   const isEvent = kind === "event";
   const day = item?.date || item?.dueDate || state.selectedDate || dateKey();
   const title = id ? (isEvent ? "予定を編集" : "ToDoを編集") : (isEvent ? "予定を追加" : "ToDoを追加");
@@ -275,8 +278,8 @@ function renderNav() {
 
 function render() {
   if (!state.db) return;
-  const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : state.tab === "work" ? renderWorkScreen(workData()) : renderFutureTab(state.tab);
-  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}`;
+  const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : state.tab === "work" ? renderWorkScreen(workData()) : renderLifeScreen(lifeData());
+  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}${renderLifeEditor(state.lifeEditor, lifeData())}`;
   document.title = `${state.page === "settings" ? "設定" : state.page === "reminders" ? "リマインダー" : TABS.find((tab) => tab.id === state.tab)?.label} | 自分管理`;
   if (state.editor) root.querySelector("#editor-form [name=title]")?.focus();
   if (state.moneyEditor) root.querySelector("#money-form input")?.focus();
@@ -323,7 +326,7 @@ async function saveForm(form) {
   const repeatRule = String(fields.get("repeatRule") || "none");
   const anchor = String(fields.get("date") || "");
   const sameSeries = existing && existing.repeatRule === repeatRule && (existing.date || existing.dueDate) === anchor;
-  const common = { repeatRule, repeatUntil: String(fields.get("repeatUntil") || ""), reminderLead: String(fields.get("reminderLead") || "none"), id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || "other"), note: String(fields.get("note") || "").trim(), createdAt: existing?.createdAt || now, updatedAt: now };
+  const common = { repeatRule, repeatUntil: String(fields.get("repeatUntil") || ""), reminderLead: String(fields.get("reminderLead") || "none"), id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || "other"), note: String(fields.get("note") || "").trim(), sourceMemoId: existing?.sourceMemoId || state.editor?.draft?.sourceMemoId || null, createdAt: existing?.createdAt || now, updatedAt: now };
   const record = kind === "event"
     ? { ...common, date: String(fields.get("date") || ""), allDay: fields.has("allDay"), start: fields.has("allDay") ? "" : String(fields.get("start") || ""), end: fields.has("allDay") ? "" : String(fields.get("end") || "") }
     : { ...common, dueDate: String(fields.get("date") || ""), dueTime: String(fields.get("dueTime") || ""), completedAt: repeatRule === "none" ? (existing?.completedAt || null) : null, completedDates: sameSeries ? (existing?.completedDates || []) : [] };
@@ -476,6 +479,130 @@ async function deleteWorkItem(kind, id) {
   toast("削除しました。");
 }
 
+const LIFE_COLLECTIONS = { habit: ["habits", "habits"], checklist: ["checklists", "checklists"], shopping: ["shoppingItems", "shoppingItems"], wishlist: ["wishlistItems", "wishlistItems"], memo: ["memos", "memos"] };
+
+function openLifeEditor(kind, id = null) {
+  state.lifeEditor = { kind, id };
+  render();
+}
+
+async function saveLifeForm(form) {
+  if (state.busy) return;
+  const { kind, id } = form.dataset;
+  const fields = new FormData(form);
+  const now = new Date().toISOString();
+  const errorNode = form.querySelector("#life-form-error");
+  if (kind === "purchase") {
+    const wish = state.wishlistItems.find((item) => item.id === id);
+    if (!wish || wish.purchasedAt) { errorNode.textContent = "購入済み、または存在しないほしい物です。"; return; }
+    const method = String(fields.get("paymentMethod"));
+    const date = String(fields.get("date") || "");
+    if (!isValidDateKey(date) || !["none", "cash", "other"].includes(method)) { errorNode.textContent = "購入日と記録方法を確認してください。"; return; }
+    const expense = method === "none" ? null : { id: crypto.randomUUID(), type: "expense", amount: Number(fields.get("amount")), date, category: String(fields.get("moneyCategory") || "other"), paymentMethod: method, note: `ほしい物「${wish.title}」から登録`, wishlistItemId: wish.id, createdAt: now, updatedAt: now };
+    const error = expense && validateTransaction(expense);
+    if (error) { errorNode.textContent = error; return; }
+    state.busy = true;
+    try {
+      await putWishlistPurchase(state.db, { ...wish, purchasedAt: now, purchaseDate: date, purchaseTransactionId: expense?.id || null, updatedAt: now }, expense);
+      state.lifeEditor = null;
+      await refresh();
+      toast(expense ? "購入済みにし、家計簿へ記録しました。" : "購入済みにしました。");
+    } catch (cause) { errorNode.textContent = `保存できませんでした。${cause?.message || ""}`; }
+    finally { state.busy = false; }
+    return;
+  }
+  const [store, key] = LIFE_COLLECTIONS[kind] || [];
+  if (!store) return;
+  const existing = id ? state[key].find((item) => item.id === id) : null;
+  const common = { id: existing?.id || crypto.randomUUID(), createdAt: existing?.createdAt || now, updatedAt: now };
+  let record, error;
+  if (kind === "habit") {
+    record = { ...common, title: String(fields.get("title") || "").trim(), startDate: String(fields.get("startDate") || ""), days: fields.getAll("days").map(Number).sort(), note: String(fields.get("note") || "").trim() };
+    error = validateHabit(record);
+  } else if (kind === "checklist") {
+    const lines = String(fields.get("items") || "");
+    if (lines.split(/\r?\n/).filter((line) => line.trim()).length > 200) { errorNode.textContent = "持ち物は200件以内にしてください。"; return; }
+    record = { ...common, title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || ""), items: mergeChecklistItems(existing?.items || [], lines) };
+    error = validateChecklist(record);
+  } else if (kind === "shopping") {
+    record = { ...common, title: String(fields.get("title") || "").trim(), quantity: String(fields.get("quantity") || "").trim(), note: String(fields.get("note") || "").trim(), checkedAt: existing?.checkedAt || null };
+    error = validateShoppingItem(record);
+  } else if (kind === "wishlist") {
+    const rawPrice = String(fields.get("price") || "").trim();
+    record = { ...common, title: String(fields.get("title") || "").trim(), price: rawPrice ? Number(rawPrice) : null, category: String(fields.get("category") || ""), priority: String(fields.get("priority") || ""), url: String(fields.get("url") || "").trim(), imageUrl: String(fields.get("imageUrl") || "").trim(), note: String(fields.get("note") || "").trim(), purchasedAt: existing?.purchasedAt || null, purchaseDate: existing?.purchaseDate || null, purchaseTransactionId: existing?.purchaseTransactionId || null };
+    error = validateWishlistItem(record);
+  } else if (kind === "memo") {
+    const body = String(fields.get("body") || "").trim();
+    record = { ...common, title: String(fields.get("title") || "").trim() || body.split(/\r?\n/).find(Boolean)?.slice(0, 120) || "", body, category: String(fields.get("category") || "") };
+    error = validateMemo(record);
+  }
+  if (error) { errorNode.textContent = error; return; }
+  state.busy = true;
+  try {
+    await putRecord(state.db, store, record);
+    if (kind === "checklist") state.activeChecklistId = record.id;
+    state.lifeEditor = null;
+    await refresh();
+    toast(existing ? "変更を保存しました。" : "登録しました。");
+  } catch (cause) { errorNode.textContent = `保存できませんでした。${cause?.message || ""}`; }
+  finally { state.busy = false; }
+}
+
+async function toggleLifeHabit(id, key) {
+  const habit = state.habits.find((item) => item.id === id);
+  if (!habit || !isValidDateKey(key) || key > dateKey() || !habitDueOn(habit, key)) return;
+  const recordId = `${id}:${key}`;
+  const existing = state.habitRecords.find((item) => item.id === recordId);
+  if (existing) await deleteRecord(state.db, "habitRecords", recordId);
+  else await putRecord(state.db, "habitRecords", { id: recordId, habitId: id, date: key, completedAt: new Date().toISOString() });
+  await refresh();
+}
+
+async function toggleChecklistItem(id, itemId) {
+  const list = state.checklists.find((item) => item.id === id);
+  if (!list || !list.items.some((item) => item.id === itemId)) return;
+  await putRecord(state.db, "checklists", { ...list, items: list.items.map((item) => item.id === itemId ? { ...item, checked: !item.checked } : item), updatedAt: new Date().toISOString() });
+  await refresh();
+}
+
+async function toggleShopping(id) {
+  const item = state.shoppingItems.find((record) => record.id === id);
+  if (!item) return;
+  await putRecord(state.db, "shoppingItems", { ...item, checkedAt: item.checkedAt ? null : new Date().toISOString(), updatedAt: new Date().toISOString() });
+  await refresh();
+}
+
+async function resetChecklist(id) {
+  const list = state.checklists.find((item) => item.id === id);
+  if (!list || !list.items.some((item) => item.checked)) return;
+  if (!window.confirm("このリストのチェックを全て外しますか？")) return;
+  await putRecord(state.db, "checklists", { ...list, items: list.items.map((item) => ({ ...item, checked: false })), updatedAt: new Date().toISOString() });
+  await refresh();
+}
+
+async function deleteLifeItem(kind, id) {
+  const [store] = LIFE_COLLECTIONS[kind] || [];
+  if (!store) return;
+  const wish = kind === "wishlist" ? state.wishlistItems.find((item) => item.id === id) : null;
+  const note = wish?.purchaseTransactionId ? "家計簿の記録は残ります。" : "";
+  if (!window.confirm(`この記録を削除しますか？${note}`)) return;
+  if (kind === "habit") await deleteHabit(state.db, id, state.habitRecords);
+  else await deleteRecord(state.db, store, id);
+  if (kind === "checklist" && state.activeChecklistId === id) state.activeChecklistId = null;
+  state.lifeEditor = null;
+  await refresh();
+  toast("削除しました。");
+}
+
+function convertMemo(id, kind) {
+  const memo = state.memos.find((item) => item.id === id);
+  if (!memo || !["todo", "event"].includes(kind)) return;
+  state.lifeEditor = null;
+  state.selectedDate = dateKey();
+  state.editor = { kind, id: null, draft: { title: memo.title, note: memo.body, category: "life", allDay: true, sourceMemoId: memo.id } };
+  render();
+}
+
 async function downloadBackup() {
   const backup = await exportBackup(state.db);
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -494,7 +621,7 @@ async function loadBackup(file) {
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) throw new Error("ファイルが大きすぎます（上限10MB）。");
   const data = JSON.parse(await file.text());
-  if (!window.confirm("バックアップを読み込みますか？同じIDの予定・ToDo・お金・仕事の記録はファイルの内容で更新されます。")) return;
+  if (!window.confirm("バックアップを読み込みますか？同じIDの予定・ToDo・お金・仕事・生活の記録はファイルの内容で更新されます。")) return;
   await importBackup(state.db, data);
   state.moneyMonthInitialized=false;
   state.workMonthInitialized=false;
@@ -506,9 +633,9 @@ root.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const action = button.dataset.action;
-  if ((action === "close-editor" || action === "money-close-editor" || action === "work-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
+  if ((action === "close-editor" || action === "money-close-editor" || action === "work-close-editor" || action === "life-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
   try {
-    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; state.workEditor = null; render(); window.scrollTo(0, 0); }
+    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; state.workEditor = null; state.lifeEditor = null; render(); window.scrollTo(0, 0); }
     else if (action === "settings") { state.page = "settings"; render(); }
     else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
@@ -516,6 +643,7 @@ root.addEventListener("click", async (event) => {
     else if (action === "goto-todos") { state.tab = "schedule"; state.scheduleMode = "todos"; render(); }
     else if (action === "goto-money") { state.tab = "money"; state.moneyMode = "wallet"; render(); }
     else if (action === "goto-work") { state.tab = "work"; state.workMode = "month"; render(); }
+    else if (action === "goto-life") { state.tab = "life"; state.lifeMode = "today"; render(); }
     else if (action === "mode-calendar") { state.scheduleMode = "calendar"; render(); }
     else if (action === "mode-todos") { state.scheduleMode = "todos"; render(); }
     else if (action === "mode") { state.scheduleMode = button.dataset.mode; render(); }
@@ -548,6 +676,18 @@ root.addEventListener("click", async (event) => {
     else if (action === "work-edit-shift") openWorkEditor("shift", button.dataset.id);
     else if (action === "work-close-editor") { state.workEditor = null; render(); }
     else if (action === "work-delete") await deleteWorkItem(button.dataset.kind, button.dataset.id);
+    else if (action === "life-mode") { state.lifeMode = button.dataset.mode; render(); }
+    else if (action === "life-open-checklist") { state.activeChecklistId = button.dataset.id || null; state.lifeMode = "checklists"; render(); }
+    else if (action === "life-add") openLifeEditor(button.dataset.kind);
+    else if (action === "life-edit") openLifeEditor(button.dataset.kind, button.dataset.id);
+    else if (action === "life-buy") openLifeEditor("purchase", button.dataset.id);
+    else if (action === "life-close-editor") { state.lifeEditor = null; render(); }
+    else if (action === "life-toggle-habit") await toggleLifeHabit(button.dataset.id, button.dataset.date);
+    else if (action === "life-toggle-checklist-item") await toggleChecklistItem(button.dataset.id, button.dataset.itemId);
+    else if (action === "life-toggle-shopping") await toggleShopping(button.dataset.id);
+    else if (action === "life-reset-checklist") await resetChecklist(button.dataset.id);
+    else if (action === "life-delete") await deleteLifeItem(button.dataset.kind, button.dataset.id);
+    else if (action === "life-memo-convert") convertMemo(button.dataset.id, button.dataset.kind);
     else if (action === "today") { state.selectedDate = dateKey(); const now = new Date(); state.month = now.getMonth(); state.year = now.getFullYear(); render(); }
     else if (action === "add-event") openEditor("event");
     else if (action === "add-todo") openEditor("todo");
@@ -567,6 +707,7 @@ root.addEventListener("submit", (event) => {
   if (event.target.id === "editor-form") { event.preventDefault(); saveForm(event.target); }
   else if (event.target.id === "money-form") { event.preventDefault(); saveMoneyForm(event.target); }
   else if (event.target.id === "work-form") { event.preventDefault(); saveWorkForm(event.target); }
+  else if (event.target.id === "life-form") { event.preventDefault(); saveLifeForm(event.target); }
 });
 
 root.addEventListener("change", async (event) => {
@@ -581,6 +722,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.editor) closeEditor();
   else if (event.key === "Escape" && state.moneyEditor) closeMoneyEditor();
   else if (event.key === "Escape" && state.workEditor) { state.workEditor = null; render(); }
+  else if (event.key === "Escape" && state.lifeEditor) { state.lifeEditor = null; render(); }
 });
 
 window.addEventListener("pageshow", () => {

@@ -1,11 +1,14 @@
-import { validateEvent, validateTodo } from "./domain.js?v=9";
-import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=9";
-import { validateWorkplace, validateWorkShift } from "./work.js?v=9";
+import { validateEvent, validateTodo } from "./domain.js?v=10";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=10";
+import { validateWorkplace, validateWorkShift } from "./work.js?v=10";
+import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=10";
 
 const DB_NAME = "self-manager";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORES_V2 = ["events", "todos", "wallets", "transactions", "fixedCosts"];
-const STORES = [...STORES_V2, "workplaces", "workShifts"];
+const STORES_V3 = [...STORES_V2, "workplaces", "workShifts"];
+const LIFE_STORES = ["habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos"];
+const STORES = [...STORES_V3, ...LIFE_STORES];
 
 function requestResult(request) {
   return new Promise((resolve, reject) => {
@@ -31,7 +34,11 @@ export function openDatabase() {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: "id" });
       }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
     request.onblocked = () => reject(new Error("別のタブでアプリが開かれています。閉じてから再試行してください。"));
   });
@@ -58,35 +65,62 @@ export async function deleteRecord(db, store, id) {
   await done;
 }
 
-export function exportBackup(db) {
-  return Promise.all(STORES.map((store)=>getAll(db,store))).then(([events,todos,wallets,transactions,fixedCosts,workplaces,workShifts])=>({format:"self-manager-backup",version:3,exportedAt:new Date().toISOString(),events,todos,wallets,transactions,fixedCosts,workplaces,workShifts}));
+export async function deleteHabit(db, id, records) {
+  const transaction = db.transaction(["habits", "habitRecords"], "readwrite");
+  const done = transactionDone(transaction);
+  transaction.objectStore("habits").delete(id);
+  for (const record of records) if (record.habitId === id) transaction.objectStore("habitRecords").delete(record.id);
+  await done;
+}
+
+export async function putWishlistPurchase(db, wish, expense = null) {
+  const transaction = db.transaction(expense ? ["wishlistItems", "transactions"] : ["wishlistItems"], "readwrite");
+  const done = transactionDone(transaction);
+  transaction.objectStore("wishlistItems").put(wish);
+  if (expense) transaction.objectStore("transactions").put(expense);
+  await done;
+}
+
+export async function exportBackup(db) {
+  const records = await Promise.all(STORES.map((store) => getAll(db, store)));
+  return { format: "self-manager-backup", version: 4, exportedAt: new Date().toISOString(), ...Object.fromEntries(STORES.map((store, index) => [store, records[index]])) };
 }
 
 export function validateBackup(value) {
-  if(!value||value.format!=="self-manager-backup"||![1,2,3].includes(value.version)||!Array.isArray(value.events)||!Array.isArray(value.todos))throw new Error("このアプリのバックアップ形式ではありません。");
-  if(value.version>=2&&(!Array.isArray(value.wallets)||!Array.isArray(value.transactions)||!Array.isArray(value.fixedCosts)))throw new Error("お金のバックアップ形式が不正です。");
-  if(value.version===3&&(!Array.isArray(value.workplaces)||!Array.isArray(value.workShifts)))throw new Error("仕事のバックアップ形式が不正です。");
-  const count=value.events.length+value.todos.length+(value.wallets?.length||0)+(value.transactions?.length||0)+(value.fixedCosts?.length||0)+(value.workplaces?.length||0)+(value.workShifts?.length||0);
-  if(count>10000||value.wallets?.length>1)throw new Error("バックアップの件数が多すぎます。");
-  for(const event of value.events)if(typeof event.id!=="string"||validateEvent(event))throw new Error("バックアップ内の予定データが不正です。");
-  for(const todo of value.todos)if(typeof todo.id!=="string"||validateTodo(todo))throw new Error("バックアップ内のToDoデータが不正です。");
-  if(value.version>=2){
-    for(const wallet of value.wallets)if(validateWallet(wallet))throw new Error("バックアップ内の財布データが不正です。");
-    for(const item of value.transactions)if(typeof item.id!=="string"||validateTransaction(item))throw new Error("バックアップ内の家計簿データが不正です。");
-    for(const item of value.fixedCosts)if(typeof item.id!=="string"||validateFixedCost(item))throw new Error("バックアップ内の固定費データが不正です。");
+  if (!value || value.format !== "self-manager-backup" || ![1, 2, 3, 4].includes(value.version) || !Array.isArray(value.events) || !Array.isArray(value.todos)) throw new Error("このアプリのバックアップ形式ではありません。");
+  if (value.version >= 2 && STORES_V2.slice(2).some((store) => !Array.isArray(value[store]))) throw new Error("お金のバックアップ形式が不正です。");
+  if (value.version >= 3 && STORES_V3.slice(5).some((store) => !Array.isArray(value[store]))) throw new Error("仕事のバックアップ形式が不正です。");
+  if (value.version >= 4 && LIFE_STORES.some((store) => !Array.isArray(value[store]))) throw new Error("生活のバックアップ形式が不正です。");
+  const names = value.version === 1 ? ["events", "todos"] : value.version === 2 ? STORES_V2 : value.version === 3 ? STORES_V3 : STORES;
+  const count = names.reduce((sum, store) => sum + value[store].length, 0);
+  if (count > 30000 || value.wallets?.length > 1) throw new Error("バックアップの件数が多すぎます。");
+  for (const item of value.events) if (typeof item.id !== "string" || validateEvent(item)) throw new Error("バックアップ内の予定データが不正です。");
+  for (const item of value.todos) if (typeof item.id !== "string" || validateTodo(item)) throw new Error("バックアップ内のToDoデータが不正です。");
+  if (value.version >= 2) {
+    for (const item of value.wallets) if (validateWallet(item)) throw new Error("バックアップ内の財布データが不正です。");
+    for (const item of value.transactions) if (typeof item.id !== "string" || validateTransaction(item)) throw new Error("バックアップ内の家計簿データが不正です。");
+    for (const item of value.fixedCosts) if (typeof item.id !== "string" || validateFixedCost(item)) throw new Error("バックアップ内の固定費データが不正です。");
   }
-  if(value.version===3){
-    for(const workplace of value.workplaces)if(validateWorkplace(workplace))throw new Error("バックアップ内の勤務先データが不正です。");
-    for(const shift of value.workShifts)if(validateWorkShift(shift,value.workplaces))throw new Error("バックアップ内のシフトデータが不正です。");
+  if (value.version >= 3) {
+    for (const item of value.workplaces) if (validateWorkplace(item)) throw new Error("バックアップ内の勤務先データが不正です。");
+    for (const item of value.workShifts) if (validateWorkShift(item, value.workplaces)) throw new Error("バックアップ内のシフトデータが不正です。");
+  }
+  if (value.version >= 4) {
+    for (const item of value.habits) if (validateHabit(item)) throw new Error("バックアップ内の習慣データが不正です。");
+    for (const item of value.habitRecords) if (validateHabitRecord(item) || !value.habits.some((habit) => habit.id === item.habitId)) throw new Error("バックアップ内の習慣履歴が不正です。");
+    for (const item of value.checklists) if (validateChecklist(item)) throw new Error("バックアップ内の持ち物データが不正です。");
+    for (const item of value.shoppingItems) if (validateShoppingItem(item)) throw new Error("バックアップ内の買い物データが不正です。");
+    for (const item of value.wishlistItems) if (validateWishlistItem(item)) throw new Error("バックアップ内のほしい物データが不正です。");
+    for (const item of value.memos) if (validateMemo(item)) throw new Error("バックアップ内のメモデータが不正です。");
   }
   return value;
 }
 
-export function importBackup(db,data) {
+export function importBackup(db, data) {
   validateBackup(data);
-  const names=data.version===1?["events","todos"]:data.version===2?STORES_V2:STORES;
-  const transaction=db.transaction(names,"readwrite");
-  const done=transactionDone(transaction);
-  for(const name of names)for(const record of (data[name]||[]))transaction.objectStore(name).put(record);
+  const names = data.version === 1 ? ["events", "todos"] : data.version === 2 ? STORES_V2 : data.version === 3 ? STORES_V3 : STORES;
+  const transaction = db.transaction(names, "readwrite");
+  const done = transactionDone(transaction);
+  for (const name of names) for (const record of data[name]) transaction.objectStore(name).put(record);
   return done;
 }
