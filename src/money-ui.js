@@ -1,10 +1,10 @@
-import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=17";
-import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=17";
-import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=17";
-import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=17";
-import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=17";
-import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=17";
-import { icon } from "./icons.js?v=17";
+import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=18";
+import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=18";
+import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=18";
+import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=18";
+import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=18";
+import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=18";
+import { icon } from "./icons.js?v=18";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
 export function yen(amount){return `${new Intl.NumberFormat("ja-JP").format(amount)}円`;}

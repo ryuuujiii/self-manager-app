@@ -1,7 +1,7 @@
-import { dateKey, formatDay } from "./domain.js?v=17";
-import { CHECKLIST_CATEGORIES, habitProgress, MEMO_CATEGORIES, PRIORITIES, WISHLIST_CATEGORIES, wishlistTotal } from "./life.js?v=17";
-import { moneyCategoryCatalog } from "./money-categories.js?v=17";
-import { icon } from "./icons.js?v=17";
+import { dateKey, formatDay } from "./domain.js?v=18";
+import { CHECKLIST_CATEGORIES, habitProgress, MEMO_CATEGORIES, PRIORITIES, WISHLIST_CATEGORIES, wishlistTotal } from "./life.js?v=18";
+import { moneyCategoryCatalog } from "./money-categories.js?v=18";
+import { icon } from "./icons.js?v=18";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 const yen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
