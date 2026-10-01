@@ -1,11 +1,11 @@
-import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=8";
-import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=8";
+import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=9";
+import { deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord } from "./db.js?v=9";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=8";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=8";
-import { payPeriodForDate } from "./pay-cycle.js?v=8";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=8";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=8";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=9";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=9";
+import { payPeriodForDate } from "./pay-cycle.js?v=9";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=9";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=9";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");

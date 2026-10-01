@@ -1,6 +1,6 @@
-import { validateEvent, validateTodo } from "./domain.js?v=8";
-import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=8";
-import { validateWorkplace, validateWorkShift } from "./work.js?v=8";
+import { validateEvent, validateTodo } from "./domain.js?v=9";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=9";
+import { validateWorkplace, validateWorkShift } from "./work.js?v=9";
 
 const DB_NAME = "self-manager";
 const DB_VERSION = 3;

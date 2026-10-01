@@ -1,6 +1,6 @@
-import { isValidDateKey } from "./domain.js?v=8";
-import { addDays } from "./domain.js?v=8";
-import { nominalPayday, paydayForMonth, shiftMonth } from "./pay-cycle.js?v=8";
+import { isValidDateKey } from "./domain.js?v=9";
+import { addDays } from "./domain.js?v=9";
+import { nominalPayday, paydayForMonth, shiftMonth } from "./pay-cycle.js?v=9";
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -60,12 +60,14 @@ export function workPeriod(month, workplace) {
     return { month, start, end: addDays(`${shiftMonth(month, 1)}-01`, -1), payday: null };
   }
   const day = workplace.closingDay ?? 1;
-  const start = nominalPayday(month, day);
-  const end = addDays(nominalPayday(shiftMonth(month, 1), day), -1);
+  const start = addDays(nominalPayday(month, day), 1);
+  const end = nominalPayday(shiftMonth(month, 1), day);
   const payRule = { salaryDay: workplace.payday, holidayShift: workplace.holidayShift || "previous" };
   const endMonth = end.slice(0, 7);
-  const sameMonthPayday = workplace.payday ? paydayForMonth(endMonth, payRule) : null;
-  const offset = workplace.payMonthOffset ?? (sameMonthPayday?.actual <= end ? 1 : 0);
+  let offset = workplace.payMonthOffset ?? 0;
+  if (workplace.payMonthOffset == null && workplace.payday) {
+    while (paydayForMonth(shiftMonth(endMonth, offset), payRule).actual <= end) offset += 1;
+  }
   const payMonth = shiftMonth(endMonth, offset);
   const payday = workplace.payday ? paydayForMonth(payMonth, payRule) : null;
   return { month, start, end, payday };

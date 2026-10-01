@@ -1,6 +1,6 @@
-import { MONEY_CATEGORIES, cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=8";
-import { dateKey, formatDay } from "./domain.js?v=8";
-import { payPeriod, periodGrid, periodSummary } from "./pay-cycle.js?v=8";
+import { MONEY_CATEGORIES, cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=9";
+import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=9";
+import { payPeriod, periodGrid, periodSummary } from "./pay-cycle.js?v=9";
 import { icon } from "./icons.js";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
@@ -46,8 +46,8 @@ export function renderLedgerCalendar(data, summary, period) {
     const selected = date === data.selectedDate;
     const payday = date === period.currentPayday?.actual || date === period.nextPayday?.actual;
     const closing = date === period.end && Boolean(period.nextPayday);
-    return `<button class="ledger-day ${current ? "" : "outside"} ${selected ? "selected" : ""} ${payday ? "payday" : ""} ${closing ? "closing" : ""}" data-action="money-select-day" data-date="${date}" aria-label="${date} 収入${yen(value.income)} 支出${yen(value.expense)}${payday ? " 給料日" : ""}${closing ? " 締切日" : ""}" aria-pressed="${selected}">
-      <span class="ledger-date">${Number(date.slice(-2))}</span>
+    return `<button class="ledger-day ${current ? "" : "outside"} ${selected ? "selected" : ""} ${payday ? "payday" : ""} ${closing ? "closing" : ""} ${date.endsWith("-01") ? "month-start" : ""}" data-action="money-select-day" data-date="${date}" aria-label="${date} 収入${yen(value.income)} 支出${yen(value.expense)}${payday ? " 給料日" : ""}${closing ? " 締切日" : ""}" aria-pressed="${selected}">
+      <span class="ledger-date">${calendarDayLabel(date)}</span>
       <span class="ledger-day-amount income">${value.income ? new Intl.NumberFormat("ja-JP").format(value.income) : "&nbsp;"}</span>
       <span class="ledger-day-amount expense">${value.expense ? new Intl.NumberFormat("ja-JP").format(value.expense) : "&nbsp;"}</span>
     </button>`;

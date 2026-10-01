@@ -19,6 +19,12 @@ export function addDays(key, count) {
   return dateKey(new Date(year, month - 1, day + count));
 }
 
+export function calendarDayLabel(key) {
+  const month = Number(key.slice(5, 7));
+  const day = Number(key.slice(8));
+  return day === 1 ? `${month}/1` : String(day);
+}
+
 export function monthGrid(year, monthIndex) {
   const first = new Date(year, monthIndex, 1);
   const offset = first.getDay();

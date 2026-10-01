@@ -131,6 +131,8 @@ svg { flex: none; }
 .day-cell.today > span:first-child { color: #0cad72; font-weight: 900; }
 .day-cell.selected { background: #e9f8ef; }
 .day-cell.selected > span:first-child { display: grid; place-items: center; width: 23px; height: 23px; margin: -4px 0 -5px; border-radius: 50%; color: white; background: #0db674; font-weight: 850; }
+.day-cell.month-start > span:first-child { font-size: 10px; font-weight: 850; }
+.day-cell.selected.month-start > span:first-child { width: 32px; border-radius: 12px; }
 .day-dots { display: flex; justify-content: center; gap: 2px; min-height: 5px; }
 .day-dots i { width: 4px; height: 4px; border-radius: 50%; }
 .day-agenda { padding: 17px 7px 5px; }
@@ -293,6 +295,7 @@ svg { flex: none; }
 .ledger-day.outside { background: #f7f9f7; opacity: .58; }
 .ledger-day.selected { outline: 2px solid #0bb277; outline-offset: -2px; background: #eafaf2; }
 .ledger-date { color: #65776d; font-size: 11px; font-weight: 800; line-height: 1; }
+.ledger-day.month-start .ledger-date { font-size: 10px; }
 .ledger-day-amount { width: 100%; overflow: hidden; font-size: clamp(8px, 2.45vw, 11px); font-weight: 750; line-height: 1.1; letter-spacing: -.04em; text-overflow: clip; white-space: nowrap; }
 .ledger-day-amount.income, .ledger-legend .income, .ledger-group-heading .income { color: #209cc5; }
 .ledger-day-amount.expense, .ledger-legend .expense, .ledger-group-heading .expense { color: #dc794d; }
