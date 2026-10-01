@@ -1,6 +1,6 @@
-import { dateKey, formatDay } from "./domain.js?v=10";
-import { CHECKLIST_CATEGORIES, habitProgress, MEMO_CATEGORIES, PRIORITIES, WISHLIST_CATEGORIES, wishlistTotal } from "./life.js?v=10";
-import { MONEY_CATEGORIES } from "./money.js?v=10";
+import { dateKey, formatDay } from "./domain.js?v=11";
+import { CHECKLIST_CATEGORIES, habitProgress, MEMO_CATEGORIES, PRIORITIES, WISHLIST_CATEGORIES, wishlistTotal } from "./life.js?v=11";
+import { MONEY_CATEGORIES } from "./money.js?v=11";
 import { icon } from "./icons.js";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -30,7 +30,7 @@ function todayScreen(data) {
   const done = due.filter((habit) => habitProgress(habit, data.habitRecords, today).todayDone).length;
   const shoppingLeft = data.shoppingItems.filter((item) => !item.checkedAt).length;
   const wishlistLeft = data.wishlistItems.filter((item) => !item.purchasedAt).length;
-  return `<section class="life-hero"><span>TODAY'S LIFE</span><strong>今日の習慣 ${done}/${due.length}</strong><p>${escape(formatDay(today, { year: "numeric", month: "long", day: "numeric", weekday: "short" }))} · 小さなことから整える</p><div class="life-progress"><i style="width:${due.length ? Math.round(done / due.length * 100) : 0}%"></i></div></section>
+  return `<section class="life-hero"><span>今日の進み具合</span><strong>習慣 ${done}/${due.length} 完了</strong><p>${escape(formatDay(today, { year: "numeric", month: "long", day: "numeric", weekday: "short" }))}</p><div class="life-progress"><i style="width:${due.length ? Math.round(done / due.length * 100) : 0}%"></i></div></section>
     <section class="content-card"><div class="section-heading"><h2>今日の習慣</h2><button class="text-link" data-action="life-mode" data-mode="habits">すべて見る ${icon("chevron", 14)}</button></div>${due.length ? due.map((habit) => habitRow(habit, data.habitRecords, today)).join("") : empty(data.habits.length ? "今日の習慣はありません。" : "習慣を登録すると、ここに今日の分が表示されます。")}${addButton("habit", "習慣を追加")}</section>
     <div class="life-shortcuts"><button data-action="life-mode" data-mode="checklists"><span>${icon("check", 19)}</span><strong>持ち物</strong><small>${data.checklists.length}リスト</small></button><button data-action="life-mode" data-mode="shopping"><span>${icon("wallet", 19)}</span><strong>買い物</strong><small>残り ${shoppingLeft}件</small></button><button data-action="life-mode" data-mode="wishlist"><span>${icon("life", 19)}</span><strong>ほしい物</strong><small>${wishlistLeft}件</small></button><button data-action="life-mode" data-mode="memos"><span>${icon("notes", 19)}</span><strong>メモ</strong><small>${data.memos.length}件</small></button></div>`;
 }

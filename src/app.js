@@ -1,13 +1,13 @@
-import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=10";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=10";
+import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=11";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=11";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=10";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=10";
-import { payPeriodForDate } from "./pay-cycle.js?v=10";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=10";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=10";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=10";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=10";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=11";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=11";
+import { payPeriodForDate } from "./pay-cycle.js?v=11";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=11";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=11";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=11";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=11";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -117,29 +117,25 @@ function renderHome() {
   return `<div class="screen home-screen">
     ${header({
       eyebrow: `${formatDay(today, { year: "numeric", month: "long", day: "numeric" })}（${weekdayLabel(today)}）`,
-      title: `${Number(today.slice(-2))}日のまとめ`,
+      title: "今日のまとめ",
       actions: `<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell", 21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings", 21)}</button>`
     })}
     <main class="screen-content">
-      <section class="welcome-band"><div><span class="band-kicker">TODAY AT A GLANCE</span><strong>今日の自分に必要なこと</strong><span>予定とやることを、ここでまとめて確認。</span></div><span class="band-icon">${icon("sparkle", 29)}</span></section>
-      <div class="overview-grid">
-        <button class="overview-tile" data-action="goto-schedule"><span class="tile-icon blue">${icon("calendar", 20)}</span><strong>${summary.todayEvents.length}</strong><span>今日の予定</span></button>
-        <button class="overview-tile" data-action="goto-todos"><span class="tile-icon pink">${icon("check", 20)}</span><strong>${summary.openCount}</strong><span>残りのToDo</span></button>
-      </div>
-      <section class="content-card">
-        <div class="section-heading"><div><span class="section-kicker green">SCHEDULE</span><h2>今日の予定</h2></div><button class="text-link" data-action="goto-schedule">予定を見る ${icon("chevron", 14)}</button></div>
+      <section class="day-brief" aria-label="今日の見通し"><div class="day-brief-date"><span>${Number(today.slice(5, 7))}月</span><strong>${Number(today.slice(-2))}</strong><span>${weekdayLabel(today)}曜日</span></div><div class="day-brief-body"><span>今日の見通し</span><strong>予定 ${summary.todayEvents.length}件 <i></i> やること ${summary.openCount}件</strong><small>${summary.openCount ? "残りのToDoを確認しましょう。" : summary.todayTodos.length ? "今日のToDoは完了しました。" : "予定やToDoをここで確認できます。"}</small></div></section>
+      <section class="content-card dashboard-card dashboard-schedule">
+        <div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("calendar", 19)}</span><div><span class="section-kicker">予定</span><h2>今日の予定</h2></div></div><button class="text-link" data-action="goto-schedule">予定を見る ${icon("chevron", 14)}</button></div>
         ${summary.todayEvents.length ? summary.todayEvents.slice(0, 4).map(renderEventRow).join("") : `<div class="empty-inline"><span class="empty-icon blue">${icon("calendar", 22)}</span><p>今日の予定はありません</p></div>`}
         <button class="inline-add" data-action="add-event">${icon("plus", 17)} 予定を追加</button>
       </section>
-      <section class="content-card">
-        <div class="section-heading"><div><span class="section-kicker pink">TO DO</span><h2>今日のToDo</h2></div><span class="section-count">${completedCount} / ${summary.todayTodos.length} 完了</span></div>
+      <section class="content-card dashboard-card dashboard-todo">
+        <div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("check", 19)}</span><div><span class="section-kicker">やること</span><h2>今日のToDo</h2></div></div><span class="section-count">${completedCount} / ${summary.todayTodos.length} 完了</span></div>
         ${summary.overdueTodos.length ? `<div class="overdue-note">期限を過ぎたToDoが ${summary.overdueTodos.length} 件あります</div>${summary.overdueTodos.slice(0, 2).map((todo) => renderTodoRow(todo, true)).join("")}` : ""}
         ${summary.todayTodos.length ? summary.todayTodos.slice(0, 5).map((todo) => renderTodoRow(todo, false)).join("") : `<div class="empty-inline"><span class="empty-icon pink">${icon("check", 22)}</span><p>今日のToDoはありません</p></div>`}
         <button class="inline-add" data-action="add-todo">${icon("plus", 17)} ToDoを追加</button>
       </section>
-      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">WORK</span><h2>次の仕事</h2></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${upcomingShift ? renderShiftAgendaRow(upcomingShift) : '<div class="empty-inline"><span class="empty-icon blue">' + icon("work", 22) + '</span><p>今後のシフトはありません</p></div>'}</section>
-      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">MONEY</span><h2>お金</h2></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
-      <section class="content-card"><div class="section-heading"><div><span class="section-kicker green">LIFE</span><h2>今日の習慣</h2></div><button class="text-link" data-action="goto-life">生活を見る ${icon("chevron", 14)}</button></div><div class="life-home-summary"><strong>${doneHabits}/${dueHabits.length}</strong><span>今日の習慣を達成</span></div>${dueHabits.length ? dueHabits.slice(0, 3).map((habit) => `<div class="life-home-item">${habitProgress(habit, state.habitRecords, today).todayDone ? "✓" : "○"} ${escapeHTML(habit.title)}</div>`).join("") : '<p class="life-note">習慣を登録すると、ここでも確認できます。</p>'}</section>
+      <section class="content-card dashboard-card dashboard-work"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("work", 19)}</span><div><span class="section-kicker">仕事</span><h2>次の仕事</h2></div></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${upcomingShift ? renderShiftAgendaRow(upcomingShift) : '<div class="empty-inline"><span class="empty-icon">' + icon("work", 22) + '</span><p>今後のシフトはありません</p></div>'}</section>
+      <section class="content-card dashboard-card dashboard-money"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("money", 19)}</span><div><span class="section-kicker">お金</span><h2>現金の財布</h2></div></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
+      <section class="content-card dashboard-card dashboard-life"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("life", 19)}</span><div><span class="section-kicker">生活</span><h2>今日の習慣</h2></div></div><button class="text-link" data-action="goto-life">生活を見る ${icon("chevron", 14)}</button></div><div class="life-home-summary"><strong>${doneHabits}/${dueHabits.length}</strong><span>今日の習慣を達成</span></div>${dueHabits.length ? dueHabits.slice(0, 3).map((habit) => `<div class="life-home-item">${habitProgress(habit, state.habitRecords, today).todayDone ? "✓" : "○"} ${escapeHTML(habit.title)}</div>`).join("") : '<p class="life-note">習慣を登録すると、ここでも確認できます。</p>'}</section>
     </main>
   </div>`;
 }

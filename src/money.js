@@ -1,4 +1,4 @@
-import { addDays, dateKey, isValidDateKey } from "./domain.js?v=10";
+import { addDays, dateKey, isValidDateKey } from "./domain.js?v=11";
 export const MONEY_CATEGORIES = {"food":"食費","transport":"交通","daily":"日用品","dining":"外食","leisure":"娯楽","housing":"住居","utilities":"光熱・通信","subscription":"サブスク","salary":"給与","other":"その他"};
 export function validateWallet(value){
   if(value.id!=="cash"||!Number.isSafeInteger(value.openingBalance)||value.openingBalance<0||value.openingBalance>1e10)return "初期残高は0円以上の整数で入力してください。";
