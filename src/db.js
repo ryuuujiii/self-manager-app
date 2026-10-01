@@ -1,8 +1,8 @@
-import { validateEvent, validateTodo } from "./domain.js?v=13";
-import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=13";
-import { validateWorkplace, validateWorkShift } from "./work.js?v=13";
-import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=13";
-import { validateMoneyCategory } from "./money-categories.js?v=13";
+import { validateEvent, validateTodo } from "./domain.js?v=14";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=14";
+import { validateWorkplace, validateWorkShift } from "./work.js?v=14";
+import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=14";
+import { validateMoneyCategory } from "./money-categories.js?v=14";
 
 const DB_NAME = "self-manager";
 const DB_VERSION = 5;

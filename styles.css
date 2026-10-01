@@ -407,6 +407,22 @@ svg { flex: none; }
 .money-insight-totals strong.income { color: #087e78; }
 .money-insight-totals strong.expense { color: #ba6452; }
 .money-insight-card .field-help { margin: 9px 0 0; }
+.cash-trend { margin: 7px 0 16px; padding: 12px 12px 9px; border: 1px solid #e6eee9; border-radius: 13px; background: #f8faf8; }
+.cash-trend-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cash-trend-heading strong { color: #355349; font-size: 11px; }
+.cash-trend-heading span { display: flex; align-items: center; gap: 4px; color: #75887d; font-size: 9px; white-space: nowrap; }
+.cash-trend-heading i { width: 7px; height: 7px; border-radius: 2px; }
+.cash-trend-heading i.income, .cash-trend-bars i.income { background: #31b28d; }
+.cash-trend-heading i.expense, .cash-trend-bars i.expense { background: #ee9374; }
+.cash-trend-heading i.expense { margin-left: 4px; }
+.cash-trend-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 9px; }
+.cash-trend-day { display: grid; gap: 5px; min-width: 0; text-align: center; }
+.cash-trend-bars { display: flex; align-items: end; justify-content: center; gap: 2px; height: 75px; border-bottom: 1px solid #dce9e0; }
+.cash-trend-bars i { width: min(12px, 39%); min-height: 0; border-radius: 3px 3px 0 0; }
+.cash-trend-day small { color: #75887d; font-size: 9px; }
+.category-manager-intro { display: grid; gap: 5px; }
+.category-manager-intro .text-link { justify-self: start; }
+.category-manager-intro .settings-copy { margin: 0; }
 .money-cat-badge { display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; color: #187c72; background: #e4f3ee; }
 .money-cat-badge[data-icon="categoryFood"], .money-cat-badge[data-icon="categoryDining"] { color: #b26a40; background: #fff1e5; }
 .money-cat-badge[data-icon="categoryTransport"], .money-cat-badge[data-icon="categoryBook"] { color: #4f78ae; background: #eaf2fc; }
