@@ -1,6 +1,6 @@
-import { dateKey, formatDay } from "./domain.js?v=14";
-import { CHECKLIST_CATEGORIES, habitProgress, MEMO_CATEGORIES, PRIORITIES, WISHLIST_CATEGORIES, wishlistTotal } from "./life.js?v=14";
-import { moneyCategoryCatalog } from "./money-categories.js?v=14";
+import { dateKey, formatDay } from "./domain.js?v=15";
+import { CHECKLIST_CATEGORIES, habitProgress, MEMO_CATEGORIES, PRIORITIES, WISHLIST_CATEGORIES, wishlistTotal } from "./life.js?v=15";
+import { moneyCategoryCatalog } from "./money-categories.js?v=15";
 import { icon } from "./icons.js";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);

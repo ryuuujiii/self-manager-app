@@ -1,4 +1,4 @@
-import { addDays, dateKey } from "./domain.js?v=14";
+import { addDays, dateKey } from "./domain.js?v=15";
 
 // 内閣府「国民の祝日」CSV（1955〜2027年、取得日 2026-09-27）
 // https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv

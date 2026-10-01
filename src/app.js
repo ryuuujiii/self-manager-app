@@ -1,15 +1,15 @@
-import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=14";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=14";
+import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=15";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=15";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=14";
-import { moneyOptions, renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=14";
-import { MONEY_CATEGORIES, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=14";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=14";
-import { payPeriodForDate } from "./pay-cycle.js?v=14";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=14";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=14";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=14";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=14";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=15";
+import { moneyOptions, renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=15";
+import { MONEY_CATEGORIES, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=15";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=15";
+import { payPeriodForDate } from "./pay-cycle.js?v=15";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=15";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=15";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=15";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=15";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");

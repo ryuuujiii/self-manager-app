@@ -1,8 +1,8 @@
-import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=14";
-import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=14";
-import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=14";
-import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=14";
-import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=14";
+import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=15";
+import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=15";
+import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=15";
+import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=15";
+import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=15";
 import { icon } from "./icons.js";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
