@@ -1,15 +1,16 @@
-import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=15";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=15";
+import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=16";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=16";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=15";
-import { moneyOptions, renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=15";
-import { MONEY_CATEGORIES, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=15";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=15";
-import { payPeriodForDate } from "./pay-cycle.js?v=15";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=15";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=15";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=15";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=15";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=16";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=16";
+import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=16";
+import { MONEY_CATEGORIES, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=16";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=16";
+import { payPeriodForDate } from "./pay-cycle.js?v=16";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=16";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=16";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=16";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=16";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -395,18 +396,30 @@ function openMoneyCategoryEditor(id=null,kind="expense"){
   state.moneyCategoryEditor={id,kind};render();
 }
 
+function updateMoneyEntryButton(form){
+  const button=form.querySelector(".money-entry-submit");
+  if(button)button.disabled=!(Number(form.elements.namedItem("amount")?.value)>0&&form.querySelector('input[name="category"]:checked'));
+}
+
+function updateMoneyCategoryButton(form){
+  const button=form.querySelector('.save-button');
+  const name=form.elements.namedItem("label");
+  if(button&&name)button.disabled=!name.value.trim();
+}
+
 async function saveMoneyCategoryForm(form){
   if(state.busy)return;
   const id=form.dataset.id,existing=state.moneyCategories.find((item)=>item.id===id);
   const builtin=Boolean(id&&Object.hasOwn(MONEY_CATEGORIES,id));
   const fields=new FormData(form),now=new Date().toISOString();
-  const record={id:id||`custom-${crypto.randomUUID()}`,label:builtin?MONEY_CATEGORIES[id]:String(fields.get("label")||"").trim(),icon:String(fields.get("icon")||""),kind:builtin?moneyCategoryCatalog(currentMoneyCategories()).find((item)=>item.id===id)?.kind:String(fields.get("kind")||""),createdAt:existing?.createdAt||now,updatedAt:now};
+  const record={id:id||`custom-${crypto.randomUUID()}`,label:builtin?MONEY_CATEGORIES[id]:String(fields.get("label")||"").trim(),icon:String(fields.get("icon")||""),color:String(fields.get("color")||""),kind:builtin?moneyCategoryCatalog(currentMoneyCategories()).find((item)=>item.id===id)?.kind:String(fields.get("kind")||""),createdAt:existing?.createdAt||now,updatedAt:now};
   const error=validateMoneyCategory(record);
   const duplicate=moneyCategoryCatalog(currentMoneyCategories(),record.kind).some((item)=>item.id!==record.id&&item.label===record.label);
   if(error||duplicate){form.querySelector("#money-category-error").textContent=error||(duplicate?"同じ名前のカテゴリがあります。":"");return;}
   state.busy=true;
   try{
     await putRecord(state.db,"moneyCategories",record);
+    if(!id&&state.moneyEditor?.draft&&state.moneyEditor.draft.type===record.kind)state.moneyEditor.draft.category=record.id;
     state.moneyCategoryEditor=null;
     await refresh();
     toast(id?"カテゴリを更新しました。":"カテゴリを追加しました。");
@@ -710,6 +723,7 @@ root.addEventListener("click", async (event) => {
     else if (action === "money-clear-day") { state.moneySelectedDate = null; render(); }
     else if (action === "money-prev-month") shiftMoneyMonth(-1);
     else if (action === "money-next-month") shiftMoneyMonth(1);
+    else if (action === "money-entry-date-step") { const input=button.closest("#money-form")?.elements.namedItem("date"); if(input)input.value=addDays(input.value||dateKey(),Number(button.dataset.step)||0); }
     else if (action === "money-edit-wallet") openMoneyEditor("wallet");
     else if (action === "money-edit-payday") openMoneyEditor("payday");
     else if (action === "money-add-transaction") openMoneyEditor("transaction", null, button.dataset.type);
@@ -718,7 +732,7 @@ root.addEventListener("click", async (event) => {
     else if (action === "money-edit-fixed") openMoneyEditor("fixed", button.dataset.id);
     else if (action === "money-toggle-fixed") await toggleFixedPaid(button.dataset.id, button.dataset.date);
     else if (action === "money-close-editor") closeMoneyEditor();
-    else if (action === "money-add-category") openMoneyCategoryEditor(null,button.dataset.kind);
+    else if (action === "money-add-category") { const form=button.closest("#money-form"); if(form&&state.moneyEditor)state.moneyEditor.draft=Object.fromEntries(new FormData(form)); openMoneyCategoryEditor(null,button.dataset.kind); }
     else if (action === "money-edit-category") openMoneyCategoryEditor(button.dataset.id);
     else if (action === "money-close-category") { state.moneyCategoryEditor=null;render(); }
     else if (action === "money-delete-category") await deleteMoneyCategory(button.dataset.id);
@@ -774,18 +788,29 @@ root.addEventListener("submit", (event) => {
 
 root.addEventListener("change", async (event) => {
   if (event.target.name === "type" && event.target.closest("#money-form")) {
-    const select=event.target.form.elements.namedItem("category");
+    const form=event.target.form;
     const kind=event.target.value;
     const categories=currentMoneyCategories();
-    const selected=moneyCategoryCatalog(categories,kind).some((item)=>item.id===select.value)?select.value:(kind==="income"?"incomeOther":"other");
-    select.innerHTML=moneyOptions(selected,categories,kind);
+    const checked=form.querySelector('input[name="category"]:checked')?.value;
+    const selected=moneyCategoryCatalog(categories,kind).some((item)=>item.id===checked)?checked:null;
+    form.querySelector(".money-entry-category-grid").innerHTML=renderMoneyCategoryChoices(selected,categories,kind);
+    form.querySelector(".money-entry-amount-label").textContent=kind==="income"?"収入":"支出";
+    form.querySelector(".money-entry-submit").textContent=form.dataset.id?"変更を保存":kind==="income"?"収入を入力する":"支出を入力する";
+    form.querySelectorAll('[data-action="money-add-category"]').forEach((button)=>button.dataset.kind=kind);
+    updateMoneyEntryButton(form);
     return;
   }
+  if(event.target.closest("#money-form")?.classList.contains("money-entry-form")){updateMoneyEntryButton(event.target.form);return;}
   if (event.target.id === "workplace-filter") { state.workWorkplaceId = event.target.value; state.workMonth = workPeriodForDate(state.workSelectedDate, state.workplaces.find((item) => item.id === state.workWorkplaceId)); render(); return; }
   if (event.target.id !== "backup-file") return;
   try { await loadBackup(event.target.files?.[0]); }
   catch (cause) { toast(cause?.message || "バックアップを読み込めませんでした。", true); }
   event.target.value = "";
+});
+
+root.addEventListener("input", (event) => {
+  if(event.target.closest("#money-form")?.classList.contains("money-entry-form"))updateMoneyEntryButton(event.target.form);
+  if(event.target.closest("#money-category-form"))updateMoneyCategoryButton(event.target.form);
 });
 
 document.addEventListener("keydown", (event) => {

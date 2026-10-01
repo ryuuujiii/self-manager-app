@@ -1,10 +1,11 @@
-import { MONEY_CATEGORY_ICONS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=15";
+import { MONEY_CATEGORY_COLORS, MONEY_CATEGORY_ICONS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=16";
 import { icon } from "./icons.js";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 
 export function categoryBadge(category, size = 19) {
-  return `<span class="money-cat-badge" data-icon="${escape(category.icon)}" aria-hidden="true">${icon(category.icon, size)}</span>`;
+  const color = MONEY_CATEGORY_COLORS.includes(category.color) ? category.color : "#48bfa9";
+  return `<span class="money-cat-badge" data-icon="${escape(category.icon)}" style="--category-color:${color}" aria-hidden="true">${icon(category.icon, size)}</span>`;
 }
 
 export function renderMoneyCategories(data) {
@@ -16,8 +17,16 @@ export function renderMoneyCategoryEditor(editor, data) {
   if (!editor) return "";
   const category = editor.id ? moneyCategoryById(editor.id, data.categories) : null;
   const builtin = Boolean(category?.builtin);
-  const title = !category ? "カテゴリを追加" : builtin ? "アイコンを変更" : "カテゴリを編集";
-  const currentIcon = category?.icon || "categoryDots";
+  const title = category ? "カテゴリを編集" : "新規カテゴリ";
+  const currentIcon = category?.icon || "categoryBag";
+  const currentColor = category?.color || MONEY_CATEGORY_COLORS[17];
   const kind = category?.kind === "both" ? "expense" : category?.kind || editor.kind || "expense";
-  return `<div class="modal-backdrop" data-action="money-close-category"><section class="editor-sheet" role="dialog" aria-modal="true" aria-labelledby="money-category-title"><div class="sheet-handle"></div><div class="editor-heading"><button class="text-link muted" type="button" data-action="money-close-category">キャンセル</button><h2 id="money-category-title">${title}</h2></div><form id="money-category-form" data-id="${escape(editor.id || "")}">${builtin ? `<p class="category-builtin-name">${categoryBadge(category)} <strong>${escape(category.label)}</strong></p>` : `<label class="field"><span>種類</span><select name="kind"><option value="expense" ${kind === "expense" ? "selected" : ""}>支出用</option><option value="income" ${kind === "income" ? "selected" : ""}>収入用</option></select></label><label class="field"><span>カテゴリ名</span><input name="label" maxlength="24" value="${escape(category?.label || "")}" placeholder="例：趣味・推し活" required /></label>`}<fieldset class="category-icon-field"><legend>アイコンを選択</legend><div class="category-icon-grid">${Object.entries(MONEY_CATEGORY_ICONS).map(([key, label]) => `<label class="category-icon-choice"><input type="radio" name="icon" value="${key}" ${key === currentIcon ? "checked" : ""} /><span>${icon(key, 22)}</span><small>${escape(label)}</small></label>`).join("")}</div></fieldset><p class="form-error" id="money-category-error" role="alert"></p><button class="primary-button save-button" type="submit">保存する</button>${category && !builtin ? `<button class="delete-button" type="button" data-action="money-delete-category" data-id="${escape(category.id)}">${icon("trash", 17)} このカテゴリを削除</button>` : ""}</form></section></div>`;
+  return `<div class="modal-backdrop money-form-backdrop" data-action="money-close-category"><section class="editor-sheet money-full-sheet money-category-sheet" role="dialog" aria-modal="true" aria-labelledby="money-category-title"><form id="money-category-form" data-id="${escape(editor.id || "")}">
+    <header class="money-full-header"><button class="money-header-icon" type="button" data-action="money-close-category" aria-label="戻る">${icon("arrowLeft", 23)}</button><h2 id="money-category-title">${title}</h2><span class="money-header-spacer"></span></header>
+    <div class="money-full-content">
+      ${builtin ? `<div class="money-category-name-row"><span>名前</span><strong>${categoryBadge(category, 23)} ${escape(category.label)}</strong></div>` : `<label class="money-category-name-row"><span>名前</span><input name="label" maxlength="24" value="${escape(category?.label || "")}" placeholder="項目名を入力してください" required /></label><label class="money-category-name-row"><span>種類</span><select name="kind"><option value="expense" ${kind === "expense" ? "selected" : ""}>支出用</option><option value="income" ${kind === "income" ? "selected" : ""}>収入用</option></select></label>`}
+      <fieldset class="money-pick-section"><legend>アイコン</legend><div class="money-icon-palette">${Object.entries(MONEY_CATEGORY_ICONS).map(([key, label]) => `<label class="money-icon-option"><input type="radio" name="icon" value="${key}" ${key === currentIcon ? "checked" : ""} /><span>${icon(key, 26)}</span><small>${escape(label)}</small></label>`).join("")}</div></fieldset>
+      <fieldset class="money-pick-section"><legend>カラー</legend><div class="money-color-palette">${MONEY_CATEGORY_COLORS.map((color, index) => `<label class="money-color-option" style="--swatch:${color}"><input type="radio" name="color" value="${color}" aria-label="カラー ${index + 1}" ${color === currentColor ? "checked" : ""} /><span aria-hidden="true"></span></label>`).join("")}</div></fieldset>
+    </div><footer class="money-full-footer"><p class="form-error" id="money-category-error" role="alert"></p><button class="primary-button save-button" type="submit" ${!category ? "disabled" : ""}>保存する</button>${category && !builtin ? `<button class="delete-button" type="button" data-action="money-delete-category" data-id="${escape(category.id)}">${icon("trash", 17)} このカテゴリを削除</button>` : ""}</footer>
+  </form></section></div>`;
 }

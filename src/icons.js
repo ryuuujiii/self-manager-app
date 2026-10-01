@@ -29,7 +29,14 @@ const paths = {
   categoryBook: '<path d="M12 5C9 3 6 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1ZM12 5v15"/>',
   categoryHeart: '<path d="M12 21C7 17 3 13 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5-4 9-9 13Z"/>',
   categoryGift: '<rect x="3" y="9" width="18" height="12" rx="1"/><path d="M3 13h18M12 9v12M12 9c-7 0-8-6-4-6 2 0 4 4 4 6ZM12 9c7 0 8-6 4-6-2 0-4 4-4 6Z"/>',
-  categoryHealth: '<path d="M12 21s-9-5-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 7-9 12-9 12ZM8 12h8M12 8v8"/>'
+  categoryHealth: '<path d="M12 21s-9-5-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 7-9 12-9 12ZM8 12h8M12 8v8"/>',
+  categoryClothes: '<path d="m8 3 4 2 4-2 5 4-3 4-2-1v11H8V10l-2 1-3-4 5-4Z"/>',
+  categoryBeauty: '<path d="M9 3h6v4H9zM8 7h8v14H8zM8 12h8M11 2h2"/>',
+  categoryTravel: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M9 5V3h6v2M4 11h16M9 11v4h6v-4"/>',
+  categoryCafe: '<path d="M4 7h13v8a6 6 0 0 1-12 0V7ZM17 9h2a2 2 0 0 1 0 4h-2M3 21h17M8 3v2M12 3v2"/>',
+  categorySports: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c4 4 4 14 0 18M12 3c-4 4-4 14 0 18"/>',
+  categoryPhone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M10 5h4M11 19h2"/>',
+  pencil: '<path d="m4 20 4-.8L20 7a2.1 2.1 0 0 0-3-3L5 16l-1 4ZM15 6l3 3"/>'
 };
 
 export function icon(name, size = 20) {
