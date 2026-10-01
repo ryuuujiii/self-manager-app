@@ -1,13 +1,15 @@
-import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=12";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=12";
+import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=13";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=13";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=12";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=12";
-import { payPeriodForDate } from "./pay-cycle.js?v=12";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=12";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=12";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=12";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=12";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=13";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=13";
+import { MONEY_CATEGORIES, moneyCategoryCatalog, validateMoneyCategory } from "./money-categories.js?v=13";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=13";
+import { payPeriodForDate } from "./pay-cycle.js?v=13";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=13";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=13";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=13";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=13";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -26,6 +28,7 @@ const state = {
   wallets: [],
   transactions: [],
   fixedCosts: [],
+  moneyCategories: [],
   workplaces: [],
   workShifts: [],
   habits: [],
@@ -43,11 +46,12 @@ const state = {
   workWorkplaceId: null,
   workSelectedDate: dateKey(),
   workEditor: null,
-  moneyMode: "wallet",
+  moneyMode: "overview",
   moneySelectedDate: null,
   moneyMonth: dateKey().slice(0, 7),
   moneyMonthInitialized: false,
   moneyEditor: null,
+  moneyCategoryEditor: null,
   tab: "home",
   page: null,
   scheduleMode: "calendar",
@@ -83,16 +87,16 @@ function toast(message, isError = false) {
 }
 
 async function refresh() {
-  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.workplaces, state.workShifts, state.habits, state.habitRecords, state.checklists, state.shoppingItems, state.wishlistItems, state.memos] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "workplaces", "workShifts", "habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos"].map((store) => getAll(state.db, store)));
+  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.moneyCategories, state.workplaces, state.workShifts, state.habits, state.habitRecords, state.checklists, state.shoppingItems, state.wishlistItems, state.memos] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "moneyCategories", "workplaces", "workShifts", "habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos"].map((store) => getAll(state.db, store)));
   if (!state.moneyMonthInitialized) { state.moneyMonth = payPeriodForDate(dateKey(), state.wallets.find((item) => item.id === "cash")); state.moneyMonthInitialized = true; }
   if (!state.workplaces.some((item) => item.id === state.workWorkplaceId)) state.workWorkplaceId = state.workplaces[0]?.id || null;
   if (!state.workMonthInitialized) { state.workMonth = workPeriodForDate(dateKey(), state.workplaces.find((item) => item.id === state.workWorkplaceId)); state.workMonthInitialized = true; }
   render();
 }
 
-function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, mode: state.moneyMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
+function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, categories: state.moneyCategories, mode: state.moneyMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
 function workData() { return { workplaces: state.workplaces, shifts: state.workShifts, workplaceId: state.workWorkplaceId, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
-function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
+function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, moneyCategories: state.moneyCategories, mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
   return `<header class="screen-header">
@@ -278,7 +282,7 @@ function renderNav() {
 function render() {
   if (!state.db) return;
   const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : state.tab === "work" ? renderWorkScreen(workData()) : renderLifeScreen(lifeData());
-  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}${renderLifeEditor(state.lifeEditor, lifeData())}`;
+  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderMoneyCategoryEditor(state.moneyCategoryEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}${renderLifeEditor(state.lifeEditor, lifeData())}`;
   document.title = `${state.page === "settings" ? "設定" : state.page === "reminders" ? "リマインダー" : TABS.find((tab) => tab.id === state.tab)?.label} | 自分管理`;
   if (state.editor) root.querySelector("#editor-form [name=title]")?.focus();
   if (state.moneyEditor) root.querySelector("#money-form input")?.focus();
@@ -381,11 +385,46 @@ function shiftMoneyMonth(delta){
 }
 
 function openMoneyEditor(kind,id=null,type="expense"){
-  state.moneyEditor={kind,id,type,cashOnly:kind==="transaction"&&state.moneyMode==="wallet"};render();
+  state.moneyEditor={kind,id,type,cashOnly:kind==="transaction"&&["overview","wallet"].includes(state.moneyMode)};render();
 }
 
 function closeMoneyEditor(){
   state.moneyEditor=null;render();
+}
+
+function openMoneyCategoryEditor(id=null){
+  state.moneyCategoryEditor={id};render();
+}
+
+async function saveMoneyCategoryForm(form){
+  if(state.busy)return;
+  const id=form.dataset.id,existing=state.moneyCategories.find((item)=>item.id===id);
+  const builtin=Boolean(id&&Object.hasOwn(MONEY_CATEGORIES,id));
+  const fields=new FormData(form),now=new Date().toISOString();
+  const record={id:id||`custom-${crypto.randomUUID()}`,label:builtin?MONEY_CATEGORIES[id]:String(fields.get("label")||"").trim(),icon:String(fields.get("icon")||""),createdAt:existing?.createdAt||now,updatedAt:now};
+  const error=validateMoneyCategory(record);
+  const duplicate=moneyCategoryCatalog(state.moneyCategories).some((item)=>item.id!==record.id&&item.label===record.label);
+  if(error||duplicate){form.querySelector("#money-category-error").textContent=error||(duplicate?"同じ名前のカテゴリがあります。":"");return;}
+  state.busy=true;
+  try{
+    await putRecord(state.db,"moneyCategories",record);
+    state.moneyCategoryEditor=null;
+    await refresh();
+    toast(id?"カテゴリを更新しました。":"カテゴリを追加しました。");
+  }catch(cause){form.querySelector("#money-category-error").textContent=`保存できませんでした。${cause?.message||""}`;}
+  finally{state.busy=false;}
+}
+
+async function deleteMoneyCategory(id){
+  if(!id?.startsWith("custom-")||!state.moneyCategories.some((item)=>item.id===id))return;
+  if(state.transactions.some((item)=>item.category===id)||state.fixedCosts.some((item)=>item.category===id)){
+    toast("このカテゴリを使っている記録があります。先に記録のカテゴリを変更してください。",true);return;
+  }
+  if(!window.confirm("このカテゴリを削除しますか？"))return;
+  await deleteRecord(state.db,"moneyCategories",id);
+  state.moneyCategoryEditor=null;
+  await refresh();
+  toast("カテゴリを削除しました。");
 }
 
 async function toggleFixedPaid(id,date){
@@ -412,12 +451,12 @@ async function saveMoneyForm(form){
     store="wallets";error=validateWallet(record);
   }else if(kind==="transaction"){
     record={...common,type:String(fields.get("type")||""),amount:Number(fields.get("amount")),date:String(fields.get("date")||""),category:String(fields.get("category")||""),paymentMethod:String(fields.get("paymentMethod")||""),note:String(fields.get("note")||"").trim()};
-    store="transactions";error=validateTransaction(record);
+    store="transactions";error=validateTransaction(record,state.moneyCategories);
   }else if(kind==="fixed"){
     const cadence=String(fields.get("cadence")||""),paymentDay=Number(fields.get("paymentDay")),startDate=String(fields.get("startDate")||"");
     const sameSchedule=existing?.cadence===cadence&&existing?.paymentDay===paymentDay&&existing?.startDate===startDate;
     record={...common,title:String(fields.get("title")||"").trim(),amount:Number(fields.get("amount")),category:String(fields.get("category")||""),cadence,paymentDay,startDate,endDate:String(fields.get("endDate")||""),reminderLead:String(fields.get("reminderLead")||"none"),note:String(fields.get("note")||"").trim(),paidDates:sameSchedule?(existing?.paidDates||[]):[]};
-    store="fixedCosts";error=validateFixedCost(record);
+    store="fixedCosts";error=validateFixedCost(record,state.moneyCategories);
   }else return;
   if(error){form.querySelector("#money-form-error").textContent=error;return}
   state.busy=true;
@@ -515,7 +554,7 @@ async function saveLifeForm(form) {
     const date = String(fields.get("date") || "");
     if (!isValidDateKey(date) || !["none", "cash", "other"].includes(method)) { errorNode.textContent = "購入日と記録方法を確認してください。"; return; }
     const expense = method === "none" ? null : { id: crypto.randomUUID(), type: "expense", amount: Number(fields.get("amount")), date, category: String(fields.get("moneyCategory") || "other"), paymentMethod: method, note: `ほしい物「${wish.title}」から登録`, wishlistItemId: wish.id, createdAt: now, updatedAt: now };
-    const error = expense && validateTransaction(expense);
+    const error = expense && validateTransaction(expense,state.moneyCategories);
     if (error) { errorNode.textContent = error; return; }
     state.busy = true;
     try {
@@ -649,15 +688,15 @@ root.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const action = button.dataset.action;
-  if ((action === "close-editor" || action === "money-close-editor" || action === "work-close-editor" || action === "life-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
+  if ((action === "close-editor" || action === "money-close-editor" || action === "money-close-category" || action === "work-close-editor" || action === "life-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
   try {
-    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; state.workEditor = null; state.lifeEditor = null; render(); window.scrollTo(0, 0); }
+    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; state.moneyCategoryEditor = null; state.workEditor = null; state.lifeEditor = null; render(); window.scrollTo(0, 0); }
     else if (action === "settings") { state.page = "settings"; render(); }
     else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
     else if (action === "goto-schedule") { state.tab = "schedule"; state.scheduleMode = "calendar"; render(); }
     else if (action === "goto-todos") { state.tab = "schedule"; state.scheduleMode = "todos"; render(); }
-    else if (action === "goto-money") { state.tab = "money"; state.moneyMode = "wallet"; render(); }
+    else if (action === "goto-money") { state.tab = "money"; state.moneyMode = "overview"; render(); }
     else if (action === "goto-work") { state.tab = "work"; state.workMode = "month"; render(); }
     else if (action === "goto-life") { state.tab = "life"; state.lifeMode = "today"; render(); }
     else if (action === "mode-calendar") { state.scheduleMode = "calendar"; render(); }
@@ -667,7 +706,7 @@ root.addEventListener("click", async (event) => {
     else if (action === "previous-month") changeMonth(-1);
     else if (action === "next-month") changeMonth(1);
     else if (action === "select-day") { state.selectedDate = button.dataset.date; state.year = Number(state.selectedDate.slice(0,4)); state.month = Number(state.selectedDate.slice(5,7))-1; render(); }
-    else if (action === "money-mode") { state.moneyMode = button.dataset.mode; render(); }
+    else if (action === "money-mode") { state.moneyMode = button.dataset.mode; render(); window.scrollTo(0, 0); }
     else if (action === "money-select-day") { state.moneySelectedDate = button.dataset.date; state.moneyMonth = payPeriodForDate(state.moneySelectedDate, moneyData().wallet); render(); }
     else if (action === "money-clear-day") { state.moneySelectedDate = null; render(); }
     else if (action === "money-prev-month") shiftMoneyMonth(-1);
@@ -680,6 +719,10 @@ root.addEventListener("click", async (event) => {
     else if (action === "money-edit-fixed") openMoneyEditor("fixed", button.dataset.id);
     else if (action === "money-toggle-fixed") await toggleFixedPaid(button.dataset.id, button.dataset.date);
     else if (action === "money-close-editor") closeMoneyEditor();
+    else if (action === "money-add-category") openMoneyCategoryEditor();
+    else if (action === "money-edit-category") openMoneyCategoryEditor(button.dataset.id);
+    else if (action === "money-close-category") { state.moneyCategoryEditor=null;render(); }
+    else if (action === "money-delete-category") await deleteMoneyCategory(button.dataset.id);
     else if (action === "money-delete") await deleteMoneyItem(button.dataset.kind, button.dataset.id);
     else if (action === "work-mode") { state.workMode = button.dataset.mode; render(); }
     else if (action === "work-prev-month") shiftWorkMonth(-1);
@@ -725,6 +768,7 @@ root.addEventListener("click", async (event) => {
 root.addEventListener("submit", (event) => {
   if (event.target.id === "editor-form") { event.preventDefault(); saveForm(event.target); }
   else if (event.target.id === "money-form") { event.preventDefault(); saveMoneyForm(event.target); }
+  else if (event.target.id === "money-category-form") { event.preventDefault(); saveMoneyCategoryForm(event.target); }
   else if (event.target.id === "work-form") { event.preventDefault(); saveWorkForm(event.target); }
   else if (event.target.id === "life-form") { event.preventDefault(); saveLifeForm(event.target); }
 });
@@ -739,6 +783,7 @@ root.addEventListener("change", async (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.editor) closeEditor();
+  else if (event.key === "Escape" && state.moneyCategoryEditor) { state.moneyCategoryEditor = null; render(); }
   else if (event.key === "Escape" && state.moneyEditor) closeMoneyEditor();
   else if (event.key === "Escape" && state.workEditor) { state.workEditor = null; render(); }
   else if (event.key === "Escape" && state.lifeEditor) { state.lifeEditor = null; render(); }

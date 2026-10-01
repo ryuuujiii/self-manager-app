@@ -1,5 +1,5 @@
-import { addDays, dateKey } from "./domain.js?v=12";
-import { adjustToBusinessDay, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=12";
+import { addDays, dateKey } from "./domain.js?v=13";
+import { adjustToBusinessDay, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=13";
 
 export function shiftMonth(month, delta) {
   const [year, number] = month.split("-").map(Number);

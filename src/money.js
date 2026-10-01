@@ -1,5 +1,6 @@
-import { addDays, dateKey, isValidDateKey } from "./domain.js?v=12";
-export const MONEY_CATEGORIES = {"food":"食費","transport":"交通","daily":"日用品","dining":"外食","leisure":"娯楽","housing":"住居","utilities":"光熱・通信","subscription":"サブスク","salary":"給与","other":"その他"};
+import { addDays, dateKey, isValidDateKey } from "./domain.js?v=13";
+import { moneyCategoryExists } from "./money-categories.js?v=13";
+export { MONEY_CATEGORIES } from "./money-categories.js?v=13";
 export function validateWallet(value){
   if(value.id!=="cash"||!Number.isSafeInteger(value.openingBalance)||value.openingBalance<0||value.openingBalance>1e10)return "初期残高は0円以上の整数で入力してください。";
   if(value.salaryDay!=null&&(!Number.isInteger(value.salaryDay)||value.salaryDay<1||value.salaryDay>31))return "給料日は1〜31日で指定してください。";
@@ -7,12 +8,12 @@ export function validateWallet(value){
   return null;
 }
 
-export function validateTransaction(value){
+export function validateTransaction(value,categories=[]){
   if(!value||!["income","expense"].includes(value.type))return "収入・支出を選択してください。";
   if(!Number.isSafeInteger(value.amount)||value.amount<1||value.amount>1e10)return "金額は1円以上の整数で入力してください。";
   if(!isValidDateKey(value.date))return "正しい日付を指定してください。";
   if(!["cash","other"].includes(value.paymentMethod))return "支払方法を選択してください。";
-  if(!MONEY_CATEGORIES[value.category])return "カテゴリを選択してください。";
+  if(!moneyCategoryExists(value.category,categories))return "カテゴリを選択してください。";
   if(typeof value.note!=="string"||value.note.length>2000)return "メモを確認してください。";
   return null;
 }
@@ -28,10 +29,10 @@ export function monthSummary(transactions,month){
   return {records,income,expense,net:income-expense};
 }
 
-export function validateFixedCost(value){
+export function validateFixedCost(value,categories=[]){
   if(!value?.title?.trim())return "名称を入力してください。";
   if(!Number.isSafeInteger(value.amount)||value.amount<1||value.amount>1e10)return "金額は1円以上の整数で入力してください。";
-  if(!MONEY_CATEGORIES[value.category])return "カテゴリを選択してください。";
+  if(!moneyCategoryExists(value.category,categories))return "カテゴリを選択してください。";
   if(!["monthly","yearly"].includes(value.cadence))return "支払い周期を選択してください。";
   if(!Number.isInteger(value.paymentDay)||value.paymentDay<1||value.paymentDay>31)return "支払日は1〜31日で指定してください。";
   if(!isValidDateKey(value.startDate))return "正しい開始日を指定してください。";

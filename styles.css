@@ -326,7 +326,7 @@ svg { flex: none; }
 .reminder-row em { padding: 4px 7px; border-radius: 7px; color: #71877b; background: #eff3f0; font-size: 10px; font-style: normal; font-weight: 800; }
 .reminder-row em.due { color: #ce6565; background: #fff0f0; }
 
-.money-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.money-modes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .wallet-hero { display: grid; justify-items: start; gap: 8px; padding: 22px; border-radius: 21px; color: white; background: linear-gradient(125deg,#11af72,#078e66); box-shadow: 0 10px 24px #0c9f6a29; }
 .wallet-hero > span { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 800; }
 .wallet-hero strong { font-size: clamp(30px,9vw,39px); letter-spacing: -.05em; }
@@ -391,6 +391,51 @@ svg { flex: none; }
 .ledger-day.closing { background: #fff8e9; }
 .ledger-day.payday .ledger-date { color: #0aa879; }
 .ledger-day.selected { background: #eafaf2; }
+
+.money-overview-hero { gap: 7px; padding: 21px 20px; }
+.money-overview-hero strong { font-size: clamp(32px, 9vw, 42px); }
+.money-overview-hero button { margin-top: 2px; }
+.money-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.money-quick-actions button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 51px; border: 1px solid #ead6d1; border-radius: 13px; color: #a45145; background: #fff3ef; font-size: 13px; font-weight: 850; }
+.money-quick-actions button:last-child { border-color: #c8e4dc; color: #087e78; background: #eaf7f3; }
+.money-insight-card { padding-bottom: 17px; }
+.money-insight-period { margin: -2px 0 11px; color: #5c786c; font-size: 11px; font-weight: 700; }
+.money-insight-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.money-insight-totals > div { display: grid; gap: 5px; min-width: 0; padding: 11px 8px; border-radius: 10px; background: #f0f5f2; }
+.money-insight-totals span { color: #60746a; font-size: 10px; font-weight: 750; }
+.money-insight-totals strong { color: #29453d; font-size: clamp(11px, 3.1vw, 16px); overflow-wrap: anywhere; }
+.money-insight-totals strong.income { color: #087e78; }
+.money-insight-totals strong.expense { color: #ba6452; }
+.money-insight-card .field-help { margin: 9px 0 0; }
+.money-cat-badge { display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; color: #187c72; background: #e4f3ee; }
+.money-cat-badge[data-icon="categoryFood"], .money-cat-badge[data-icon="categoryDining"] { color: #b26a40; background: #fff1e5; }
+.money-cat-badge[data-icon="categoryTransport"], .money-cat-badge[data-icon="categoryBook"] { color: #4f78ae; background: #eaf2fc; }
+.money-cat-badge[data-icon="categoryLeisure"], .money-cat-badge[data-icon="categoryHeart"], .money-cat-badge[data-icon="categoryGift"] { color: #ae6388; background: #fbedf4; }
+.money-cat-badge[data-icon="categoryHouse"], .money-cat-badge[data-icon="categoryHealth"] { color: #7867a3; background: #f0edfa; }
+.money-cat-badge[data-icon="categoryBolt"], .money-cat-badge[data-icon="categoryRepeat"] { color: #a27838; background: #f8f0df; }
+.money-category-stat { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-top: 1px solid #edf1ef; }
+.money-category-stat-main { display: grid; flex: 1; gap: 7px; min-width: 0; }
+.money-category-stat-main > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.money-category-stat-main strong, .money-category-stat-main b { color: #304c42; font-size: 12px; }
+.money-category-stat-main b { white-space: nowrap; }
+.money-category-stat-main > i { overflow: hidden; height: 6px; border-radius: 8px; background: #ecf2ee; }
+.money-category-stat-main > i > em { display: block; height: 100%; border-radius: inherit; background: #2f9d87; }
+.money-category { align-items: center; }
+.money-category > span:nth-child(2) { flex: 1; }
+.category-manager-row { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 59px; padding: 8px 0; border: 0; border-top: 1px solid #edf1ef; background: none; text-align: left; }
+.category-manager-row > span:nth-child(2) { display: grid; flex: 1; gap: 3px; }
+.category-manager-row strong { color: #2f453b; font-size: 13px; }
+.category-manager-row small { color: #829389; font-size: 10px; }
+.category-manager-row > svg { color: #869a8f; }
+.category-builtin-name { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 14px; }
+.category-icon-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.category-icon-field legend { margin-bottom: 9px; color: #4d6255; font-size: 11px; font-weight: 800; }
+.category-icon-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.category-icon-choice { position: relative; display: grid; justify-items: center; gap: 5px; min-width: 0; padding: 10px 3px; border: 1px solid #e6ece7; border-radius: 11px; color: #72867a; background: #f7f9f7; text-align: center; }
+.category-icon-choice:has(input:checked) { border-color: #087e78; color: #087e78; background: #e9f7f3; box-shadow: 0 0 0 1px #087e78; }
+.category-icon-choice:focus-within { outline: 2px solid #087e78; outline-offset: 2px; }
+.category-icon-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.category-icon-choice small { font-size: 9px; white-space: nowrap; }
 
 /* Each area has its own quiet visual cue; the data remains the focus. */
 .home-screen { --area: #137c65; --area-soft: #e7f3ed; --area-header: #e8f3ed; }

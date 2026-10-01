@@ -15,7 +15,21 @@ const paths = {
   notes: '<path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h8"/>',
   trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/>',
   download: '<path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/>',
-  upload: '<path d="M12 17V5m-4 4 4-4 4 4M4 17v4h16v-4"/>'
+  upload: '<path d="M12 17V5m-4 4 4-4 4 4M4 17v4h16v-4"/>',
+  categoryFood: '<path d="M5 3v7a3 3 0 0 0 6 0V3M8 3v18M18 3c-2 2-3 5-3 9h4V3M19 12v9"/>',
+  categoryTransport: '<rect x="4" y="4" width="16" height="15" rx="3"/><path d="M4 12h16M7 19v2M17 19v2M8 8h2M14 8h2M8 15h.01M16 15h.01"/>',
+  categoryBag: '<path d="M4 8h16l-1 13H5L4 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',
+  categoryDining: '<path d="M4 13h16a8 8 0 0 1-16 0ZM3 21h18M7 9V4M12 9V2M17 9V4"/>',
+  categoryLeisure: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/>',
+  categoryHouse: '<path d="m3 10 9-7 9 7v11H3V10ZM9 21v-7h6v7"/>',
+  categoryBolt: '<path d="m13 2-9 11h7l-1 9 10-12h-7V2Z"/>',
+  categoryRepeat: '<path d="M4 8a8 8 0 0 1 14-3l2 2M20 7V3M20 7h-4M20 16a8 8 0 0 1-14 3l-2-2M4 17v4M4 17h4"/>',
+  categorySalary: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M12 12v6M9 14h6"/>',
+  categoryDots: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  categoryBook: '<path d="M12 5C9 3 6 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1ZM12 5v15"/>',
+  categoryHeart: '<path d="M12 21C7 17 3 13 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5-4 9-9 13Z"/>',
+  categoryGift: '<rect x="3" y="9" width="18" height="12" rx="1"/><path d="M3 13h18M12 9v12M12 9c-7 0-8-6-4-6 2 0 4 4 4 6ZM12 9c7 0 8-6 4-6-2 0-4 4-4 6Z"/>',
+  categoryHealth: '<path d="M12 21s-9-5-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 7-9 12-9 12ZM8 12h8M12 8v8"/>'
 };
 
 export function icon(name, size = 20) {

@@ -1,14 +1,16 @@
-import { validateEvent, validateTodo } from "./domain.js?v=12";
-import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=12";
-import { validateWorkplace, validateWorkShift } from "./work.js?v=12";
-import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=12";
+import { validateEvent, validateTodo } from "./domain.js?v=13";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=13";
+import { validateWorkplace, validateWorkShift } from "./work.js?v=13";
+import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=13";
+import { validateMoneyCategory } from "./money-categories.js?v=13";
 
 const DB_NAME = "self-manager";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORES_V2 = ["events", "todos", "wallets", "transactions", "fixedCosts"];
 const STORES_V3 = [...STORES_V2, "workplaces", "workShifts"];
 const LIFE_STORES = ["habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos"];
-const STORES = [...STORES_V3, ...LIFE_STORES];
+const STORES_V4 = [...STORES_V3, ...LIFE_STORES];
+const STORES = [...STORES_V4, "moneyCategories"];
 
 function requestResult(request) {
   return new Promise((resolve, reject) => {
@@ -83,23 +85,28 @@ export async function putWishlistPurchase(db, wish, expense = null) {
 
 export async function exportBackup(db) {
   const records = await Promise.all(STORES.map((store) => getAll(db, store)));
-  return { format: "self-manager-backup", version: 4, exportedAt: new Date().toISOString(), ...Object.fromEntries(STORES.map((store, index) => [store, records[index]])) };
+  return { format: "self-manager-backup", version: 5, exportedAt: new Date().toISOString(), ...Object.fromEntries(STORES.map((store, index) => [store, records[index]])) };
 }
 
 export function validateBackup(value) {
-  if (!value || value.format !== "self-manager-backup" || ![1, 2, 3, 4].includes(value.version) || !Array.isArray(value.events) || !Array.isArray(value.todos)) throw new Error("このアプリのバックアップ形式ではありません。");
+  if (!value || value.format !== "self-manager-backup" || ![1, 2, 3, 4, 5].includes(value.version) || !Array.isArray(value.events) || !Array.isArray(value.todos)) throw new Error("このアプリのバックアップ形式ではありません。");
   if (value.version >= 2 && STORES_V2.slice(2).some((store) => !Array.isArray(value[store]))) throw new Error("お金のバックアップ形式が不正です。");
   if (value.version >= 3 && STORES_V3.slice(5).some((store) => !Array.isArray(value[store]))) throw new Error("仕事のバックアップ形式が不正です。");
   if (value.version >= 4 && LIFE_STORES.some((store) => !Array.isArray(value[store]))) throw new Error("生活のバックアップ形式が不正です。");
-  const names = value.version === 1 ? ["events", "todos"] : value.version === 2 ? STORES_V2 : value.version === 3 ? STORES_V3 : STORES;
+  if (value.version >= 5 && !Array.isArray(value.moneyCategories)) throw new Error("お金のカテゴリのバックアップ形式が不正です。");
+  const names = value.version === 1 ? ["events", "todos"] : value.version === 2 ? STORES_V2 : value.version === 3 ? STORES_V3 : value.version === 4 ? STORES_V4 : STORES;
   const count = names.reduce((sum, store) => sum + value[store].length, 0);
   if (count > 30000 || value.wallets?.length > 1) throw new Error("バックアップの件数が多すぎます。");
   for (const item of value.events) if (typeof item.id !== "string" || validateEvent(item)) throw new Error("バックアップ内の予定データが不正です。");
   for (const item of value.todos) if (typeof item.id !== "string" || validateTodo(item)) throw new Error("バックアップ内のToDoデータが不正です。");
+  if (value.version >= 5) {
+    for (const item of value.moneyCategories) if (validateMoneyCategory(item)) throw new Error("バックアップ内のお金のカテゴリが不正です。");
+    if (new Set(value.moneyCategories.map((item) => item.id)).size !== value.moneyCategories.length) throw new Error("バックアップ内のお金のカテゴリが重複しています。");
+  }
   if (value.version >= 2) {
     for (const item of value.wallets) if (validateWallet(item)) throw new Error("バックアップ内の財布データが不正です。");
-    for (const item of value.transactions) if (typeof item.id !== "string" || validateTransaction(item)) throw new Error("バックアップ内の家計簿データが不正です。");
-    for (const item of value.fixedCosts) if (typeof item.id !== "string" || validateFixedCost(item)) throw new Error("バックアップ内の固定費データが不正です。");
+    for (const item of value.transactions) if (typeof item.id !== "string" || validateTransaction(item, value.moneyCategories || [])) throw new Error("バックアップ内の家計簿データが不正です。");
+    for (const item of value.fixedCosts) if (typeof item.id !== "string" || validateFixedCost(item, value.moneyCategories || [])) throw new Error("バックアップ内の固定費データが不正です。");
   }
   if (value.version >= 3) {
     for (const item of value.workplaces) if (validateWorkplace(item)) throw new Error("バックアップ内の勤務先データが不正です。");
@@ -118,7 +125,7 @@ export function validateBackup(value) {
 
 export function importBackup(db, data) {
   validateBackup(data);
-  const names = data.version === 1 ? ["events", "todos"] : data.version === 2 ? STORES_V2 : data.version === 3 ? STORES_V3 : STORES;
+  const names = data.version === 1 ? ["events", "todos"] : data.version === 2 ? STORES_V2 : data.version === 3 ? STORES_V3 : data.version === 4 ? STORES_V4 : STORES;
   const transaction = db.transaction(names, "readwrite");
   const done = transactionDone(transaction);
   for (const name of names) for (const record of data[name]) transaction.objectStore(name).put(record);
