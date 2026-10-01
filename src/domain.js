@@ -62,6 +62,7 @@ export function validateEvent(value) {
   if (!value.allDay && (!isValidTime(value.start) || !isValidTime(value.end))) return "開始・終了時刻を指定してください。";
   if (!value.allDay && value.end <= value.start) return "終了時刻は開始時刻より後にしてください。";
   if (!CATEGORIES[value.category]) return "カテゴリを選択してください。";
+  if (value.excludedDates && (!Array.isArray(value.excludedDates) || value.excludedDates.some((date) => !isValidDateKey(date) || date < value.date) || new Set(value.excludedDates).size !== value.excludedDates.length)) return "繰り返し予定の除外日が不正です。";
   return validateOptions(value, value.date);
 }
 
@@ -94,8 +95,19 @@ export function todoOccurrence(todo, key) {
   return { ...todo, occurrenceDate: key, completedAt: (todo.repeatRule && todo.repeatRule !== "none") ? (todo.completedDates?.includes(key) ? key : null) : todo.completedAt };
 }
 export function eventsForDay(events, key) {
-  return events.filter((event) => occursOn(event, event.date, key)).map((event) => ({ ...event, occurrenceDate: key }))
+  return events.filter((event) => occursOn(event, event.date, key) && !event.excludedDates?.includes(key)).map((event) => ({ ...event, occurrenceDate: key }))
     .sort((a, b) => (a.allDay ? "" : a.start).localeCompare(b.allDay ? "" : b.start));
+}
+
+export function deleteRepeatingEventOccurrence(event, key, scope) {
+  if (!event || !["daily", "weekly", "monthly"].includes(event.repeatRule) || !isValidDateKey(key) || !occursOn(event, event.date, key) || event.excludedDates?.includes(key)) throw new Error("削除する繰り返し予定が見つかりません。");
+  if (scope === "single") return { ...event, excludedDates: [...new Set([...(event.excludedDates || []), key])].sort() };
+  if (scope === "future") {
+    if (key === event.date) return null;
+    const repeatUntil = addDays(key, -1);
+    return { ...event, repeatUntil, excludedDates: (event.excludedDates || []).filter((date) => date <= repeatUntil) };
+  }
+  throw new Error("削除範囲が不正です。");
 }
 
 export function todosForDay(todos, key) {

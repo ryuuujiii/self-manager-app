@@ -1,13 +1,13 @@
-import { addDays, CATEGORIES, dateKey, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=11";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=11";
+import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=12";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=12";
 import { icon } from "./icons.js";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=11";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=11";
-import { payPeriodForDate } from "./pay-cycle.js?v=11";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=11";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=11";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=11";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=11";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=12";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=12";
+import { payPeriodForDate } from "./pay-cycle.js?v=12";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=12";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=12";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=12";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=12";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -142,7 +142,7 @@ function renderHome() {
 
 function renderEventRow(event) {
   const category = CATEGORIES[event.category] || CATEGORIES.other;
-  return `<button class="event-row" data-action="edit-event" data-id="${escapeHTML(event.id)}">
+  return `<button class="event-row" data-action="edit-event" data-id="${escapeHTML(event.id)}" data-date="${escapeHTML(event.occurrenceDate || event.date)}">
     <span class="event-stripe" style="--stripe:${category.color}"></span>
     <span class="event-details"><strong>${escapeHTML(event.title)}</strong><span>${escapeHTML(clockRange(event))} <span class="middot">·</span> ${escapeHTML(category.label)}</span></span>
     ${icon("chevron", 16)}
@@ -218,7 +218,7 @@ function renderSchedule() {
 function renderReminders() {
   const now=new Date(),items=[...remindersForWindow(state.events,state.todos,now),...fixedCostReminders(state.fixedCosts,now)].sort((a,b)=>a.triggerAt-b.triggerAt);
   const due=items.filter((item)=>item.triggerAt<=now),upcoming=items.filter((item)=>item.triggerAt>now);
-  const row=(item)=>`<button class="reminder-row" data-action="${item.kind==="fixedCost"?"money-edit-fixed":`edit-${item.kind}`}" data-id="${escapeHTML(item.id)}"><span class="reminder-icon">${icon(item.kind==="event"?"calendar":item.kind==="fixedCost"?"money":"check",18)}</span><span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(displayDate(item.occurrenceDate))} ${item.scheduledAt.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})} · ${item.kind==="event"?"予定":item.kind==="fixedCost"?"固定費":"ToDo"}</small></span><em class="${item.triggerAt<=now?"due":""}">${item.triggerAt<=now?"確認":"予定"}</em></button>`;
+  const row=(item)=>`<button class="reminder-row" data-action="${item.kind==="fixedCost"?"money-edit-fixed":`edit-${item.kind}`}" data-id="${escapeHTML(item.id)}" data-date="${escapeHTML(item.occurrenceDate)}"><span class="reminder-icon">${icon(item.kind==="event"?"calendar":item.kind==="fixedCost"?"money":"check",18)}</span><span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(displayDate(item.occurrenceDate))} ${item.scheduledAt.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})} · ${item.kind==="event"?"予定":item.kind==="fixedCost"?"固定費":"ToDo"}</small></span><em class="${item.triggerAt<=now?"due":""}">${item.triggerAt<=now?"確認":"予定"}</em></button>`;
   return `<div class="screen reminders-screen">${header({title:"リマインダー",back:true})}<main class="screen-content"><div class="privacy-note">${icon("bell",18)}<p>アプリを開いているときに確認できます。指定時刻のバックグラウンド通知はまだ利用できません。</p></div><section class="content-card"><div class="section-heading"><h2>確認する項目</h2><span class="section-count">${due.length}件</span></div>${due.length?due.map(row).join(""):`<div class="empty-inline"><p>確認する項目はありません</p></div>`}</section><section class="content-card"><div class="section-heading"><h2>これから7日間</h2><span class="section-count">${upcoming.length}件</span></div>${upcoming.length?upcoming.map(row).join(""):`<div class="empty-inline"><p>予定されているリマインダーはありません</p></div>`}</section></main></div>`;
 }
 
@@ -246,12 +246,15 @@ function renderEditor() {
   const { kind, id } = state.editor;
   const item = id ? (kind === "event" ? state.events : state.todos).find((record) => record.id === id) : state.editor.draft;
   const isEvent = kind === "event";
+  const repeatingEvent = isEvent && item?.repeatRule && item.repeatRule !== "none";
+  const occurrenceDate = state.editor.occurrenceDate || item?.date;
+  if (state.editor.deleteScope && repeatingEvent) return `<div class="modal-backdrop" data-action="close-editor"><section class="editor-sheet delete-scope-sheet" role="dialog" aria-modal="true" aria-labelledby="delete-scope-title"><div class="sheet-handle"></div><div class="editor-heading"><h2 id="delete-scope-title">繰り返し予定を削除</h2></div><p class="delete-scope-target">${escapeHTML(displayDate(occurrenceDate))}の「${escapeHTML(item.title)}」</p><button class="delete-scope-option" data-action="delete-repeating-event" data-scope="single"><strong>この予定だけ削除</strong><small>ほかの日の繰り返しは残します</small></button><button class="delete-scope-option" data-action="delete-repeating-event" data-scope="future"><strong>この予定以降を削除</strong><small>選んだ日より前の予定は残します</small></button><button class="secondary-button delete-scope-cancel" data-action="cancel-event-delete">戻る</button></section></div>`;
   const day = item?.date || item?.dueDate || state.selectedDate || dateKey();
   const title = id ? (isEvent ? "予定を編集" : "ToDoを編集") : (isEvent ? "予定を追加" : "ToDoを追加");
   return `<div class="modal-backdrop" data-action="close-editor"><section class="editor-sheet" role="dialog" aria-modal="true" aria-labelledby="editor-title">
     <div class="sheet-handle"></div><div class="editor-heading"><button class="text-link muted" type="button" data-action="close-editor">キャンセル</button><h2 id="editor-title">${title}</h2><span class="editor-heading-spacer"></span></div>
     <form id="editor-form" data-kind="${kind}" data-id="${escapeHTML(id || "")}">
-      ${id && item?.repeatRule && item.repeatRule !== "none" ? `<p class="field-help">この変更は繰り返し全体に適用されます。</p>` : ""}
+      ${id && repeatingEvent ? `<p class="field-help">${escapeHTML(displayDate(occurrenceDate))}の予定を選択中。編集内容は繰り返し全体に適用されます。</p>` : ""}
       <label class="field"><span>タイトル</span><input name="title" maxlength="120" placeholder="${isEvent ? "予定の内容" : "やること"}" value="${escapeHTML(item?.title || "")}" required autofocus /></label>
       <label class="field"><span>${isEvent ? "日付" : "期限日"}</span><input name="date" type="date" value="${escapeHTML(day)}" ${isEvent ? "required" : ""} /></label>
       ${isEvent ? `<label class="toggle-field"><span>終日の予定</span><input name="allDay" type="checkbox" ${item?.allDay ? "checked" : ""} /></label><div class="time-fields"><label class="field"><span>開始</span><input name="start" type="time" value="${escapeHTML(item?.start || "09:00")}" /></label><label class="field"><span>終了</span><input name="end" type="time" value="${escapeHTML(item?.end || "10:00")}" /></label></div>` : `<label class="field"><span>期限時刻 <small>任意</small></span><input name="dueTime" type="time" value="${escapeHTML(item?.dueTime || "")}" /></label>`}
@@ -263,7 +266,7 @@ function renderEditor() {
       <label class="field"><span>メモ <small>任意</small></span><textarea name="note" rows="3" maxlength="2000" placeholder="補足があれば記入">${escapeHTML(item?.note || "")}</textarea></label>
       <p class="form-error" id="form-error" role="alert"></p>
       <button class="primary-button save-button" type="submit">${id ? "変更を保存" : "登録する"}</button>
-      ${id ? `<button class="delete-button" type="button" data-action="delete-record" data-kind="${kind}" data-id="${escapeHTML(id)}">${icon("trash", 17)} 削除する</button>` : ""}
+      ${id ? `<button class="delete-button" type="button" data-action="${repeatingEvent ? "choose-event-delete" : "delete-record"}" data-kind="${kind}" data-id="${escapeHTML(id)}">${icon("trash", 17)} ${repeatingEvent ? "削除方法を選ぶ" : "削除する"}</button>` : ""}
     </form>
   </section></div>`;
 }
@@ -281,8 +284,8 @@ function render() {
   if (state.moneyEditor) root.querySelector("#money-form input")?.focus();
 }
 
-function openEditor(kind, id = null) {
-  state.editor = { kind, id };
+function openEditor(kind, id = null, occurrenceDate = null) {
+  state.editor = { kind, id, occurrenceDate };
   render();
 }
 
@@ -324,7 +327,7 @@ async function saveForm(form) {
   const sameSeries = existing && existing.repeatRule === repeatRule && (existing.date || existing.dueDate) === anchor;
   const common = { repeatRule, repeatUntil: String(fields.get("repeatUntil") || ""), reminderLead: String(fields.get("reminderLead") || "none"), id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || "other"), note: String(fields.get("note") || "").trim(), sourceMemoId: existing?.sourceMemoId || state.editor?.draft?.sourceMemoId || null, createdAt: existing?.createdAt || now, updatedAt: now };
   const record = kind === "event"
-    ? { ...common, date: String(fields.get("date") || ""), allDay: fields.has("allDay"), start: fields.has("allDay") ? "" : String(fields.get("start") || ""), end: fields.has("allDay") ? "" : String(fields.get("end") || "") }
+    ? { ...common, date: String(fields.get("date") || ""), allDay: fields.has("allDay"), start: fields.has("allDay") ? "" : String(fields.get("start") || ""), end: fields.has("allDay") ? "" : String(fields.get("end") || ""), excludedDates: sameSeries && repeatRule !== "none" ? (existing.excludedDates || []).filter((date) => !common.repeatUntil || date <= common.repeatUntil) : [] }
     : { ...common, dueDate: String(fields.get("date") || ""), dueTime: String(fields.get("dueTime") || ""), completedAt: repeatRule === "none" ? (existing?.completedAt || null) : null, completedDates: sameSeries ? (existing?.completedDates || []) : [] };
   const error = kind === "event" ? validateEvent(record) : validateTodo(record);
   if (error) {
@@ -351,6 +354,23 @@ async function deleteItem(kind, id) {
   state.editor = null;
   await refresh();
   toast("削除しました。");
+}
+
+async function deleteRepeatingEvent(scope) {
+  if (state.busy || state.editor?.kind !== "event") return;
+  const item = state.events.find((record) => record.id === state.editor.id);
+  const key = state.editor.occurrenceDate || item?.date;
+  const updated = deleteRepeatingEventOccurrence(item, key, scope);
+  state.busy = true;
+  try {
+    if (updated) await putRecord(state.db, "events", { ...updated, updatedAt: new Date().toISOString() });
+    else await deleteRecord(state.db, "events", item.id);
+    state.editor = null;
+    await refresh();
+    toast(scope === "single" ? "この予定だけ削除しました。" : "この予定以降を削除しました。");
+  } finally {
+    state.busy = false;
+  }
 }
 
 function shiftMoneyMonth(delta){
@@ -687,10 +707,13 @@ root.addEventListener("click", async (event) => {
     else if (action === "today") { state.selectedDate = dateKey(); const now = new Date(); state.month = now.getMonth(); state.year = now.getFullYear(); render(); }
     else if (action === "add-event") openEditor("event");
     else if (action === "add-todo") openEditor("todo");
-    else if (action === "edit-event") openEditor("event", button.dataset.id);
+    else if (action === "edit-event") openEditor("event", button.dataset.id, button.dataset.date);
     else if (action === "edit-todo") openEditor("todo", button.dataset.id);
     else if (action === "toggle-todo") await toggleTodo(button.dataset.id, button.dataset.date);
     else if (action === "close-editor") closeEditor();
+    else if (action === "choose-event-delete") { state.editor.deleteScope = true; render(); }
+    else if (action === "cancel-event-delete") { state.editor.deleteScope = false; render(); }
+    else if (action === "delete-repeating-event") await deleteRepeatingEvent(button.dataset.scope);
     else if (action === "delete-record") await deleteItem(button.dataset.kind, button.dataset.id);
     else if (action === "export") await downloadBackup();
     else if (action === "import") root.querySelector("#backup-file")?.click();

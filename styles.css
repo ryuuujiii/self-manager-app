@@ -283,6 +283,13 @@ svg { flex: none; }
 .form-error { min-height: 16px; margin: 0; color: #ce4e5a; font-size: 11px; font-weight: 700; }
 .save-button { width: 100%; min-height: 46px; }
 .delete-button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 40px; border: 0; color: #d66069; background: transparent; font-size: 11px; font-weight: 800; }
+.delete-scope-sheet { display: grid; gap: 11px; }
+.delete-scope-sheet .editor-heading { margin-bottom: 0; }
+.delete-scope-target { margin: 0 0 6px; color: #53675c; font-size: 13px; line-height: 1.5; }
+.delete-scope-option { display: grid; gap: 5px; width: 100%; padding: 15px 16px; border: 1px solid #f2d8d8; border-radius: 13px; color: #b14c51; background: #fff7f7; text-align: left; }
+.delete-scope-option strong { font-size: 14px; }
+.delete-scope-option small { color: #7b7474; font-size: 11px; }
+.delete-scope-cancel { width: 100%; margin-top: 4px; }
 .toast { position: fixed; z-index: 70; right: 16px; bottom: calc(78px + env(safe-area-inset-bottom)); left: 16px; width: max-content; max-width: calc(100vw - 32px); margin: 0 auto; padding: 12px 18px; border-radius: 10px; color: white; background: #264b37; box-shadow: 0 7px 20px #17382638; font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(10px); transition: opacity .2s, transform .2s; }
 .toast.visible { opacity: 1; transform: translateY(0); }
 .toast.error { background: #c4515f; }

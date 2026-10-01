@@ -1,7 +1,7 @@
-import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=11";
+import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=12";
 import { icon } from "./icons.js";
-import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=11";
-import { periodGrid } from "./pay-cycle.js?v=11";
+import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=12";
+import { periodGrid } from "./pay-cycle.js?v=12";
 
 const yen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
