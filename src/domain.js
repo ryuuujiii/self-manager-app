@@ -21,7 +21,7 @@ export function addDays(key, count) {
 
 export function monthGrid(year, monthIndex) {
   const first = new Date(year, monthIndex, 1);
-  const offset = (first.getDay() + 6) % 7;
+  const offset = first.getDay();
   const count = Math.ceil((offset + new Date(year, monthIndex + 1, 0).getDate()) / 7) * 7;
   return Array.from({ length: count }, (_, index) => dateKey(new Date(year, monthIndex, index - offset + 1)));
 }

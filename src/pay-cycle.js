@@ -1,5 +1,5 @@
-import { addDays, dateKey } from "./domain.js";
-import { adjustToBusinessDay, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=6";
+import { addDays, dateKey } from "./domain.js?v=8";
+import { adjustToBusinessDay, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=8";
 
 export function shiftMonth(month, delta) {
   const [year, number] = month.split("-").map(Number);
@@ -57,7 +57,7 @@ export function payPeriodForDate(key, wallet) {
 
 export function periodGrid(start, end) {
   const [year, month, day] = start.split("-").map(Number);
-  const firstWeekday = (new Date(year, month - 1, day).getDay() + 6) % 7;
+  const firstWeekday = new Date(year, month - 1, day).getDay();
   const first = addDays(start, -firstWeekday);
   const keys = [];
   for (let cursor = first; keys.length < 56; cursor = addDays(cursor, 1)) {

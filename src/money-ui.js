@@ -1,6 +1,6 @@
-import { MONEY_CATEGORIES, cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=6";
-import { dateKey, formatDay } from "./domain.js";
-import { payPeriod, periodGrid, periodSummary } from "./pay-cycle.js?v=6";
+import { MONEY_CATEGORIES, cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=8";
+import { dateKey, formatDay } from "./domain.js?v=8";
+import { payPeriod, periodGrid, periodSummary } from "./pay-cycle.js?v=8";
 import { icon } from "./icons.js";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
@@ -39,7 +39,7 @@ export function renderLedgerCalendar(data, summary, period) {
     value[item.type] += item.amount;
     daily.set(item.date, value);
   }
-  const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
   const cells = periodGrid(period.start, period.end).map((date) => {
     const value = daily.get(date) || { income: 0, expense: 0 };
     const current = period.start <= date && date <= period.end;

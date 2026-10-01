@@ -123,8 +123,8 @@ svg { flex: none; }
 .month-control .icon-button { width: 32px; height: 32px; background: transparent; }
 .weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 .weekdays { padding: 4px 0 6px; color: #88988e; font-size: 10px; font-weight: 700; text-align: center; }
-.weekdays span:nth-child(6) { color: #65a1e7; }
-.weekdays span:nth-child(7) { color: #ed8199; }
+.weekdays span:nth-child(1) { color: #ed8199; }
+.weekdays span:nth-child(7) { color: #65a1e7; }
 .calendar-grid { border-top: 1px solid #edf0ee; border-left: 1px solid #edf0ee; }
 .day-cell { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; min-height: 48px; padding: 7px 1px 4px; border: 0; border-right: 1px solid #edf0ee; border-bottom: 1px solid #edf0ee; background: white; color: #465850; font-size: 11px; }
 .day-cell.outside { color: #c7d0ca; background: #fafbfa; }
@@ -175,6 +175,18 @@ svg { flex: none; }
 .work-row-main strong { overflow: hidden; color: #304138; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .work-row-main small { color: #8b9a90; font-size: 10px; line-height: 1.4; }
 .work-shift-row b { color: #34473b; font-size: 12px; white-space: nowrap; }
+.work-period-range { display: flex; justify-content: space-between; gap: 8px; margin: 0 7px 10px; color: #617d6e; font-size: 11px; font-weight: 750; }
+.work-period-range span { color: #eb8153; white-space: nowrap; }
+.work-filter { padding: 0 3px; }
+.work-fixed-date { display: block; padding: 12px; border: 1px solid #dee8df; border-radius: 10px; color: #34483d; background: #f5f8f6; font-size: 13px; }
+.work-patterns { display: grid; gap: 8px; }
+.work-patterns > strong { color: #53695c; font-size: 11px; }
+.work-patterns > div { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 3px; }
+.work-patterns button { display: grid; flex: none; gap: 3px; min-width: 135px; padding: 9px 11px; border: 1px solid #dcebe2; border-radius: 11px; color: #3b5144; background: #fff; text-align: left; }
+.work-patterns button[aria-pressed="true"] { border-color: #12b778; background: #e9f8ef; }
+.work-patterns button span { font-size: 10px; }
+.work-patterns button b { font-size: 13px; }
+.work-patterns button small { color: #85968b; font-size: 9px; }
 
 .settings-copy { margin: 0 0 14px; color: #71847a; font-size: 12px; line-height: 1.7; }
 .settings-action { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 63px; padding: 8px 2px; border: 0; border-top: 1px solid #eef3ef; text-align: left; color: #0fb274; background: none; }
@@ -226,6 +238,8 @@ svg { flex: none; }
 .week-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; padding: 6px 2px 10px; }
 .week-day { display: grid; justify-items: center; gap: 4px; min-height: 65px; padding: 8px 2px; border: 0; border-radius: 10px; color: #70867a; background: #f5f8f6; }
 .week-day strong { font-size: 15px; }
+.week-day:first-child:not(.selected) { color: #db737d; }
+.week-day:last-child:not(.selected) { color: #5c9ed1; }
 .week-day small { min-height: 12px; font-size: 10px; }
 .week-day.selected { color: white; background: #10b875; }
 .field-help { margin: -6px 0 0; color: #82968a; font-size: 10px; line-height: 1.5; }
@@ -272,8 +286,8 @@ svg { flex: none; }
 .ledger-weekdays, .ledger-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .ledger-weekdays { background: #edf4ee; }
 .ledger-weekdays span { padding: 7px 0; color: #73877a; font-size: 10px; font-weight: 800; text-align: center; }
-.ledger-weekdays span:nth-child(6) { color: #359dc0; }
-.ledger-weekdays span:nth-child(7) { color: #df7771; }
+.ledger-weekdays span:nth-child(1) { color: #df7771; }
+.ledger-weekdays span:nth-child(7) { color: #359dc0; }
 .ledger-day { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 58px; padding: 5px 2px 4px 4px; border: 0; border-right: 1px solid #e6ede7; border-bottom: 1px solid #e6ede7; border-radius: 0; background: #fff; text-align: left; }
 .ledger-day:nth-child(7n) { border-right: 0; }
 .ledger-day.outside { background: #f7f9f7; opacity: .58; }
