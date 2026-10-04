@@ -643,16 +643,14 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .money-trend-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 2px 0 10px; }
 .money-stat-caption { margin: 0 0 14px; color: #708579; font-size: 11px; line-height: 1.5; }
 .money-trend-chart { padding: 12px 10px 9px; border: 1px solid #e5ece8; border-radius: 13px; background: #fafcfb; }
-.money-trend-legend { display: flex; justify-content: flex-end; gap: 13px; color: #637b70; font-size: 11px; font-weight: 750; }
-.money-trend-legend span { display: flex; align-items: center; gap: 5px; }
-.money-trend-legend i { width: 12px; height: 3px; border-radius: 3px; }
-.money-trend-legend i.income { background: #3985c7; }
-.money-trend-legend i.expense { background: #d66672; }
+.money-trend-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 3px 5px; }
+.money-trend-heading span { color: #637b70; font-size: 11px; font-weight: 750; }
+.money-trend-heading strong { color: #176f69; font-size: 18px; }
 .money-trend-chart svg { display: block; width: 100%; height: 154px; overflow: visible; }
 .money-trend-gridline { fill: none; stroke: #e7ede9; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .money-trend-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.money-trend-line.income { stroke: #3985c7; }
-.money-trend-line.expense { stroke: #d66672; }
+.money-trend-line.balance { stroke: #148c82; }
+.money-trend-end { fill: #148c82; stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .money-trend-axis { display: flex; justify-content: space-between; color: #788c80; font-size: 10px; }
 .money-trend-labels { display: flex; justify-content: space-between; gap: 4px; margin-top: 9px; color: #60776a; font-size: 9px; }
 .money-donut-layout { display: grid; gap: 17px; }

@@ -1,24 +1,32 @@
-import { moneyCategoryById } from "./money-categories.js?v=21";
+import { moneyCategoryById } from "./money-categories.js?v=22";
 
 const formatYen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 
-export function moneyTrendSeries(transactions, month, interval = "day") {
+export function moneyTrendSeries(transactions, wallet, month, interval = "day") {
   const [year, monthNumber] = month.split("-").map(Number);
   const buckets = interval === "month"
     ? Array.from({ length: 12 }, (_, index) => {
       const date = new Date(year, monthNumber - 12 + index, 1);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      return { key, label: `${date.getMonth() + 1}月`, income: 0, expense: 0 };
+      return { key, label: `${date.getMonth() + 1}月`, balance: 0 };
     })
     : Array.from({ length: new Date(year, monthNumber, 0).getDate() }, (_, index) => {
       const day = index + 1;
-      return { key: `${month}-${String(day).padStart(2, "0")}`, label: `${day}日`, income: 0, expense: 0 };
+      return { key: `${month}-${String(day).padStart(2, "0")}`, label: `${day}日`, balance: 0 };
     });
-  const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+  const changes = new Map(buckets.map((bucket) => [bucket.key, 0]));
+  let balance = wallet?.openingBalance || 0;
   for (const item of transactions) {
-    const bucket = byKey.get(interval === "month" ? item.date.slice(0, 7) : item.date);
-    if (bucket && (item.type === "income" || item.type === "expense")) bucket[item.type] += item.amount;
+    if (item.paymentMethod !== "cash") continue;
+    const key = interval === "month" ? item.date.slice(0, 7) : item.date;
+    const change = item.type === "income" ? item.amount : -item.amount;
+    if (key < buckets[0].key) balance += change;
+    else if (changes.has(key)) changes.set(key, changes.get(key) + change);
+  }
+  for (const bucket of buckets) {
+    balance += changes.get(bucket.key);
+    bucket.balance = balance;
   }
   return buckets;
 }
@@ -33,16 +41,20 @@ export function expenseBreakdown(transactions, month, categories = []) {
     .sort((a, b) => b.amount - a.amount);
 }
 
-export function renderMoneyTrend(transactions, month, interval = "day") {
-  const points = moneyTrendSeries(transactions, month, interval);
-  const max = Math.max(1, ...points.flatMap((point) => [point.income, point.expense]));
+export function renderMoneyTrend(transactions, wallet, month, interval = "day") {
+  const points = moneyTrendSeries(transactions, wallet, month, interval);
+  const balances = points.map((point) => point.balance);
+  const smallest = Math.min(...balances), largest = Math.max(...balances);
+  const padding = smallest === largest ? Math.max(100, Math.abs(smallest) * 0.05) : (largest - smallest) * 0.15;
+  const lower = smallest - padding, upper = largest + padding;
   const left = 10, right = 350, top = 14, bottom = 142;
   const x = (index) => left + index * (right - left) / Math.max(1, points.length - 1);
-  const y = (value) => bottom - value / max * (bottom - top);
-  const path = (kind) => points.map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)} ${y(point[kind]).toFixed(1)}`).join(" ");
+  const y = (value) => bottom - (value - lower) / (upper - lower) * (bottom - top);
+  const path = points.map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)} ${y(point.balance).toFixed(1)}`).join(" ");
   const labels = points.filter((_, index) => interval === "month" ? index % 3 === 0 || index === points.length - 1 : index === 0 || index % 5 === 4 || index === points.length - 1);
-  const description = points.map((point) => `${point.key} 収入${formatYen(point.income)} 支出${formatYen(point.expense)}`).join("、");
-  return `<div class="money-trend-chart"><div class="money-trend-legend"><span><i class="income"></i>収入</span><span><i class="expense"></i>支出</span></div><svg viewBox="0 0 360 154" preserveAspectRatio="none" role="img" aria-label="${escape(description)}"><path class="money-trend-gridline" d="M10 14H350 M10 78H350 M10 142H350"/><path class="money-trend-line income" d="${path("income")}"/><path class="money-trend-line expense" d="${path("expense")}"/></svg><div class="money-trend-axis"><span>0円</span><span>最大 ${formatYen(max)}</span></div><div class="money-trend-labels">${labels.map((point) => `<span>${escape(point.label)}</span>`).join("")}</div></div>`;
+  const description = points.map((point) => `${point.key} 財布残高${formatYen(point.balance)}`).join("、");
+  const last = points.at(-1);
+  return `<div class="money-trend-chart"><div class="money-trend-heading"><span>期間末の財布残高</span><strong>${formatYen(last.balance)}</strong></div><svg viewBox="0 0 360 154" preserveAspectRatio="none" role="img" aria-label="${escape(description)}"><path class="money-trend-gridline" d="M10 14H350 M10 78H350 M10 142H350"/><path class="money-trend-line balance" d="${path}"/><circle class="money-trend-end" cx="${x(points.length - 1).toFixed(1)}" cy="${y(last.balance).toFixed(1)}" r="4"/></svg><div class="money-trend-axis"><span>${formatYen(smallest)}</span><span>${formatYen(largest)}</span></div><div class="money-trend-labels">${labels.map((point) => `<span>${escape(point.label)}</span>`).join("")}</div></div>`;
 }
 
 export function renderExpenseDonut(transactions, month, categories = []) {

@@ -1,11 +1,11 @@
-import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=21";
-import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=21";
-import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=21";
-import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=21";
-import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=21";
-import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=21";
-import { icon } from "./icons.js?v=21";
-import { renderExpenseDonut, renderMoneyTrend } from "./money-charts.js?v=21";
+import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=22";
+import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=22";
+import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=22";
+import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=22";
+import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=22";
+import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=22";
+import { icon } from "./icons.js?v=22";
+import { renderExpenseDonut, renderMoneyTrend } from "./money-charts.js?v=22";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
 export function yen(amount){return `${new Intl.NumberFormat("ja-JP").format(amount)}円`;}
@@ -117,10 +117,10 @@ export function renderLedger(data) {
   const summary = monthSummary(data.transactions, data.month);
   const sorted = [...summary.records].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   return `<section class="content-card ledger-month-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft", 20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron", 20)}</button></div></section>
-    <p class="field-help">この画面の統計と一覧には、現金・現金以外の記録を含みます。財布の現金だけの動きは「概要」または「カレンダー」で確認できます。</p>
+    <p class="field-help">折れ線は現金の財布残高です。円グラフと記録一覧には現金以外も含みます。</p>
     <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 収支を記録</button></div>
     <section class="content-card"><div class="money-summary ledger-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div><div><span>収支</span><b>${summary.net < 0 ? "−" : "+"}${yen(Math.abs(summary.net))}</b></div></div></section>
-    <section class="content-card money-stat-card"><div class="section-heading"><div><span class="section-kicker green">収支の動向</span><h2>${data.trendMode === "month" ? "月ごとの推移" : "日ごとの推移"}</h2></div></div><div class="segmented money-trend-modes" role="group" aria-label="推移の集計単位"><button class="${data.trendMode !== "month" ? "active" : ""}" data-action="money-trend-mode" data-mode="day" aria-pressed="${data.trendMode !== "month"}">日ごと</button><button class="${data.trendMode === "month" ? "active" : ""}" data-action="money-trend-mode" data-mode="month" aria-pressed="${data.trendMode === "month"}">月ごと</button></div><p class="money-stat-caption">${data.trendMode === "month" ? `${moneyMonthLabel(data.month)}までの12か月` : `${moneyMonthLabel(data.month)}の毎日`} · 収入と支出を別々に表示</p>${renderMoneyTrend(data.transactions, data.month, data.trendMode)}</section>
+    <section class="content-card money-stat-card"><div class="section-heading"><div><span class="section-kicker green">現金の動向</span><h2>${data.trendMode === "month" ? "月末ごとの財布残高" : "日末ごとの財布残高"}</h2></div></div><div class="segmented money-trend-modes" role="group" aria-label="推移の集計単位"><button class="${data.trendMode !== "month" ? "active" : ""}" data-action="money-trend-mode" data-mode="day" aria-pressed="${data.trendMode !== "month"}">日ごと</button><button class="${data.trendMode === "month" ? "active" : ""}" data-action="money-trend-mode" data-mode="month" aria-pressed="${data.trendMode === "month"}">月ごと</button></div><p class="money-stat-caption">${data.trendMode === "month" ? `${moneyMonthLabel(data.month)}までの12か月` : `${moneyMonthLabel(data.month)}の毎日`} · 初期残高と現金の記録から計算。${data.trendMode === "month" ? "記録がない月は前月末の残高を引き継ぎます。" : "記録がない日は前日の残高を引き継ぎます。"}</p>${renderMoneyTrend(data.transactions, data.wallet, data.month, data.trendMode)}</section>
     <section class="content-card money-stat-card"><div class="section-heading"><div><span class="section-kicker green">支出の内訳</span><h2>カテゴリ別の割合</h2></div><button class="text-link" data-action="money-mode" data-mode="categories">カテゴリを編集 ${icon("chevron", 14)}</button></div><p class="money-stat-caption">${moneyMonthLabel(data.month)}の支出</p>${renderExpenseDonut(data.transactions, data.month, data.categories)}</section>
     <section class="content-card"><div class="section-heading"><h2>収支の記録</h2><span class="section-count">${sorted.length}件</span></div>${sorted.length ? sorted.map((item) => transactionRow(item, data.categories)).join("") : `<p class="settings-copy">この月の記録はありません。</p>`}</section>`;
 }
