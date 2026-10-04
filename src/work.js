@@ -1,6 +1,6 @@
-import { isValidDateKey } from "./domain.js?v=18";
-import { addDays } from "./domain.js?v=18";
-import { nominalPayday, paydayForMonth, shiftMonth } from "./pay-cycle.js?v=18";
+import { isValidDateKey } from "./domain.js?v=19";
+import { addDays } from "./domain.js?v=19";
+import { nominalPayday, paydayForMonth, shiftMonth } from "./pay-cycle.js?v=19";
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -13,6 +13,7 @@ export function validateWorkplace(value) {
   if (typeof value.id !== "string" || !value.id) return "勤務先のIDが不正です。";
   if (typeof value.name !== "string" || !value.name.trim() || value.name.length > 120) return "勤務先名を入力してください。";
   if (!Number.isSafeInteger(value.hourlyWage) || value.hourlyWage < 1 || value.hourlyWage > 1000000) return "時給は1円以上の整数で入力してください。";
+  if (value.transportPerDay != null && (!Number.isSafeInteger(value.transportPerDay) || value.transportPerDay < 0 || value.transportPerDay > 1000000)) return "交通費は1日あたり0〜100万円の整数で入力してください。";
   if (value.payday != null && (!Number.isInteger(value.payday) || value.payday < 1 || value.payday > 31)) return "給料日は1〜31日で指定してください。";
   if (value.closingDay != null && (!Number.isInteger(value.closingDay) || value.closingDay < 1 || value.closingDay > 31)) return "締め日は1〜31日で指定してください。";
   if (value.payMonthOffset != null && ![0, 1].includes(value.payMonthOffset)) return "給料の支払月を選んでください。";
@@ -88,8 +89,10 @@ export function workPeriodSummary(shifts, workplace, month) {
   const period = workPeriod(month, workplace);
   const monthly = workplace ? shifts.filter((shift) => shift.workplaceId === workplace.id && shift.date >= period.start && shift.date <= period.end) : [];
   const minutes = monthly.reduce((total, shift) => total + shiftMinutes(shift), 0);
-  const pay = monthly.reduce((total, shift) => total + shiftPay(shift, workplace), 0);
-  return { ...period, shifts: monthly.sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start)), count: new Set(monthly.map((shift) => shift.date)).size, minutes, pay };
+  const count = new Set(monthly.map((shift) => shift.date)).size;
+  const wagePay = monthly.reduce((total, shift) => total + shiftPay(shift, workplace), 0);
+  const transportPay = count * (workplace?.transportPerDay || 0);
+  return { ...period, shifts: monthly.sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start)), count, minutes, wagePay, transportPay, pay: wagePay + transportPay };
 }
 
 export function shiftPatterns(shifts, workplaces, limit = 6) {
@@ -119,6 +122,9 @@ export function workSummary(shifts, workplaces, month) {
   const monthly = shiftsForMonth(shifts, month);
   const valid = monthly.filter((shift) => workplaceById.has(shift.workplaceId));
   const minutes = valid.reduce((total, shift) => total + shiftMinutes(shift), 0);
-  const pay = valid.reduce((total, shift) => total + shiftPay(shift, workplaceById.get(shift.workplaceId)), 0);
+  const wages = valid.reduce((total, shift) => total + shiftPay(shift, workplaceById.get(shift.workplaceId)), 0);
+  const paidDays = new Map(valid.map((shift) => [JSON.stringify([shift.workplaceId, shift.date]), shift.workplaceId]));
+  const transportPay = [...paidDays.values()].reduce((total, workplaceId) => total + (workplaceById.get(workplaceId)?.transportPerDay || 0), 0);
+  const pay = wages + transportPay;
   return { count: new Set(valid.map((shift) => shift.date)).size, shiftCount: valid.length, minutes, pay, shifts: valid };
 }

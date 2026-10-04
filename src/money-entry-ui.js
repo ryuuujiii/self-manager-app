@@ -1,7 +1,7 @@
-import { dateKey } from "./domain.js?v=18";
-import { MONEY_CATEGORY_COLORS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=18";
-import { categoryBadge } from "./money-categories-ui.js?v=18";
-import { icon } from "./icons.js?v=18";
+import { dateKey } from "./domain.js?v=19";
+import { MONEY_CATEGORY_COLORS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=19";
+import { categoryBadge } from "./money-categories-ui.js?v=19";
+import { icon } from "./icons.js?v=19";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 
@@ -26,7 +26,7 @@ export function renderMoneyTransactionEditor(editor, data) {
     <header class="money-full-header money-entry-header"><button class="money-header-icon" type="button" data-action="money-close-editor" aria-label="戻る">${icon("arrowLeft", 20)}</button><div class="money-header-title"><span>MY MONEY</span><h2 id="money-entry-title">${title}</h2></div><span class="money-header-tag">${editor.cashOnly ? "現金" : "収支"}</span></header>
     <div class="money-full-content money-entry-content">
       <fieldset class="money-type-switch"><legend class="money-sr-only">収支</legend><label><input type="radio" name="type" value="expense" ${type === "expense" ? "checked" : ""} /><span><b>−</b> 支出</span></label><label><input type="radio" name="type" value="income" ${type === "income" ? "checked" : ""} /><span><b>＋</b> 収入</span></label></fieldset>
-      <section class="money-entry-amount-card"><label for="money-entry-amount">記録する金額 <span class="money-entry-amount-label">${type === "income" ? "収入" : "支出"}</span></label><span class="money-entry-amount"><input id="money-entry-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" value="${escape(amount)}" placeholder="0" required /><small>円</small></span></section>
+      <section class="money-entry-amount-card" data-type="${type}"><label for="money-entry-amount">記録する金額 <span class="money-entry-amount-label">${type === "income" ? "＋ 収入" : "− 支出"}</span></label><span class="money-entry-amount"><input id="money-entry-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" value="${escape(amount)}" placeholder="0" required /><small>円</small></span></section>
       <div class="money-entry-rows"><div class="money-entry-row"><label for="money-entry-date">日付</label><div class="money-entry-date"><button type="button" data-action="money-entry-date-step" data-step="-1" aria-label="前の日">${icon("arrowLeft", 17)}</button><input id="money-entry-date" name="date" type="date" value="${escape(date)}" aria-label="日付" required /><button type="button" data-action="money-entry-date-step" data-step="1" aria-label="次の日">${icon("chevron", 17)}</button></div></div>
       <label class="money-entry-row"><span>メモ</span><input name="note" maxlength="2000" value="${escape(value.note || "")}" placeholder="何に使ったかをメモ" /></label></div>
       <div class="money-entry-category-heading"><div><span class="money-section-index">01 / 分類</span><h3>カテゴリを選ぶ</h3></div><button type="button" data-action="money-add-category" data-kind="${type}">${icon("plus", 16)} 新しく作る</button></div>

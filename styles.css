@@ -332,15 +332,15 @@ svg { flex: none; }
 .wallet-hero strong { font-size: clamp(30px,9vw,39px); letter-spacing: -.05em; }
 .wallet-hero small { opacity: .84; font-size: 11px; }
 .wallet-hero button { margin-top: 6px; padding: 8px 12px; border: 1px solid #ffffff73; border-radius: 9px; color: white; background: #ffffff23; font-size: 11px; font-weight: 800; }
-.money-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.money-action-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .money-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .money-summary > div { display: grid; flex: 1 1 95px; gap: 6px; min-width: 0; padding: 12px; border-radius: 11px; background: #f4f8f5; }
 .money-summary span { color: #83958a; font-size: 10px; font-weight: 700; }
 .money-summary b { color: #284439; font-size: clamp(13px,3.7vw,17px); white-space: nowrap; }
-.money-summary b.income, .money-record b.income { color: #0ba678; }
-.money-summary b.expense, .money-record b.expense { color: #e36c68; }
+.money-summary b.income, .money-record b.income { color: #2e74b7; }
+.money-summary b.expense, .money-record b.expense { color: #c4515d; }
 .money-record { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 58px; padding: 9px 0; border: 0; border-top: 1px solid #edf2ee; background: none; text-align: left; }
-.money-record-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #129c70; background: #e7f7ee; }
+.money-record-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #2e74b7; background: #eaf2fc; }
 .money-record-icon.expense { color: #e17167; background: #fff0ec; }
 .money-record-main { display: grid; flex: 1; min-width: 0; gap: 4px; border: 0; background: none; text-align: left; }
 .money-record-main strong { overflow: hidden; color: #2f4037; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -370,8 +370,8 @@ svg { flex: none; }
 .ledger-date { color: #65776d; font-size: 11px; font-weight: 800; line-height: 1; }
 .ledger-day.month-start .ledger-date { font-size: 10px; }
 .ledger-day-amount { width: 100%; overflow: hidden; font-size: clamp(8px, 2.45vw, 11px); font-weight: 750; line-height: 1.1; letter-spacing: -.04em; text-overflow: clip; white-space: nowrap; }
-.ledger-day-amount.income, .ledger-legend .income, .ledger-group-heading .income { color: #209cc5; }
-.ledger-day-amount.expense, .ledger-legend .expense, .ledger-group-heading .expense { color: #dc794d; }
+.ledger-day-amount.income, .ledger-legend .income, .ledger-group-heading .income { color: #2e74b7; }
+.ledger-day-amount.expense, .ledger-legend .expense, .ledger-group-heading .expense { color: #c4515d; }
 .ledger-legend { display: flex; justify-content: flex-end; gap: 12px; padding: 7px 10px; font-size: 10px; font-weight: 750; }
 .ledger-summary { flex-wrap: nowrap; }
 .ledger-summary > div { flex-basis: 0; padding: 9px 7px; }
@@ -395,25 +395,24 @@ svg { flex: none; }
 .money-overview-hero { gap: 7px; padding: 21px 20px; }
 .money-overview-hero strong { font-size: clamp(32px, 9vw, 42px); }
 .money-overview-hero button { margin-top: 2px; }
-.money-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.money-quick-actions button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 51px; border: 1px solid #ead6d1; border-radius: 13px; color: #a45145; background: #fff3ef; font-size: 13px; font-weight: 850; }
-.money-quick-actions button:last-child { border-color: #c8e4dc; color: #087e78; background: #eaf7f3; }
+.money-quick-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.money-quick-actions button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 51px; border: 1px solid #c8e4dc; border-radius: 13px; color: #176959; background: #eaf7f3; font-size: 13px; font-weight: 850; }
 .money-insight-card { padding-bottom: 17px; }
 .money-insight-period { margin: -2px 0 11px; color: #5c786c; font-size: 11px; font-weight: 700; }
 .money-insight-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .money-insight-totals > div { display: grid; gap: 5px; min-width: 0; padding: 11px 8px; border-radius: 10px; background: #f0f5f2; }
 .money-insight-totals span { color: #60746a; font-size: 10px; font-weight: 750; }
 .money-insight-totals strong { color: #29453d; font-size: clamp(11px, 3.1vw, 16px); overflow-wrap: anywhere; }
-.money-insight-totals strong.income { color: #087e78; }
-.money-insight-totals strong.expense { color: #ba6452; }
+.money-insight-totals strong.income { color: #2e74b7; }
+.money-insight-totals strong.expense { color: #c4515d; }
 .money-insight-card .field-help { margin: 9px 0 0; }
 .cash-trend { margin: 7px 0 16px; padding: 12px 12px 9px; border: 1px solid #e6eee9; border-radius: 13px; background: #f8faf8; }
 .cash-trend-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .cash-trend-heading strong { color: #355349; font-size: 11px; }
 .cash-trend-heading span { display: flex; align-items: center; gap: 4px; color: #75887d; font-size: 9px; white-space: nowrap; }
 .cash-trend-heading i { width: 7px; height: 7px; border-radius: 2px; }
-.cash-trend-heading i.income, .cash-trend-bars i.income { background: #31b28d; }
-.cash-trend-heading i.expense, .cash-trend-bars i.expense { background: #ee9374; }
+.cash-trend-heading i.income, .cash-trend-bars i.income { background: #5b9acc; }
+.cash-trend-heading i.expense, .cash-trend-bars i.expense { background: #df7078; }
 .cash-trend-heading i.expense { margin-left: 4px; }
 .cash-trend-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 9px; }
 .cash-trend-day { display: grid; gap: 5px; min-width: 0; text-align: center; }
@@ -555,17 +554,19 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .money-type-switch input, .money-entry-category input, .money-icon-option input, .money-color-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .money-type-switch span { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; border: 1px solid #e0e8e1; border-radius: 13px; color: #60756b; background: #fff; font-size: 14px; font-weight: 800; }
 .money-type-switch b { font-size: 22px; font-weight: 500; line-height: 1; }
-.money-type-switch input[value="expense"]:checked + span { border-color: #dfbba7; color: #a85f39; background: #fff4ed; box-shadow: 0 3px 0 #eec8b4; }
-.money-type-switch input[value="income"]:checked + span { border-color: #98cabb; color: #277b67; background: #eaf7f1; box-shadow: 0 3px 0 #afd9ca; }
+.money-type-switch input[value="expense"]:checked + span { border-color: #e2aab1; color: #a83f50; background: #fff0f1; box-shadow: 0 3px 0 #f0c4ca; }
+.money-type-switch input[value="income"]:checked + span { border-color: #9bbde0; color: #2b68a3; background: #edf5ff; box-shadow: 0 3px 0 #c5d9ec; }
 .money-type-switch label:focus-within span, .money-entry-category:focus-within, .money-icon-option:focus-within, .money-color-option:focus-within { outline: 2px solid #298f77; outline-offset: 2px; }
 .money-full-content { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 28px; }
-.money-entry-amount-card { display: grid; gap: 14px; min-height: 139px; margin-bottom: 15px; padding: 20px 22px; border-radius: 19px; color: #e1f2e8; background: radial-gradient(circle at 95% 5%, #477965 0, transparent 42%), linear-gradient(135deg, #173d36, #285747); box-shadow: 0 9px 20px #1b443326; }
-.money-entry-amount-card > label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #d9efe1; font-size: 12px; font-weight: 850; }
+.money-entry-amount-card { display: grid; gap: 14px; min-height: 139px; margin-bottom: 15px; padding: 20px 22px; border-radius: 19px; color: #fff; }
+.money-entry-amount-card[data-type="expense"] { background: radial-gradient(circle at 95% 5%, #be737b 0, transparent 42%), linear-gradient(135deg, #793345, #a64a57); box-shadow: 0 9px 20px #79334528; }
+.money-entry-amount-card[data-type="income"] { background: radial-gradient(circle at 95% 5%, #6ba4d0 0, transparent 42%), linear-gradient(135deg, #244e85, #397ab2); box-shadow: 0 9px 20px #244e8528; }
+.money-entry-amount-card > label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #fff9; font-size: 12px; font-weight: 850; }
 .money-entry-amount-label { padding: 5px 9px; border: 1px solid #ffffff38; border-radius: 8px; color: #f2f9f4; font-size: 11px; }
 .money-entry-amount { display: flex; align-items: baseline; min-width: 0; }
 .money-entry-amount input { flex: 1; width: 100%; min-width: 0; height: 60px; padding: 0; border: 0; outline: 0; color: #fff; background: transparent; font-size: 43px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.money-entry-amount input::placeholder { color: #b4cebd; }
-.money-entry-amount small { margin-left: 8px; color: #d9eee2; font-size: 20px; font-weight: 800; }
+.money-entry-amount input::placeholder { color: #fffc; }
+.money-entry-amount small { margin-left: 8px; color: #fff9; font-size: 20px; font-weight: 800; }
 .money-entry-rows { overflow: hidden; margin-bottom: 24px; padding: 0 15px; border: 1px solid #e5ebe5; border-radius: 15px; background: #fff; }
 .money-entry-row { display: grid; grid-template-columns: 55px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 61px; color: #50665b; font-size: 13px; font-weight: 800; }
 .money-entry-row + .money-entry-row { border-top: 1px solid #edf1eb; }

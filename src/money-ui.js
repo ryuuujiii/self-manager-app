@@ -1,10 +1,10 @@
-import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=18";
-import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=18";
-import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=18";
-import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=18";
-import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=18";
-import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=18";
-import { icon } from "./icons.js?v=18";
+import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=19";
+import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=19";
+import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=19";
+import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=19";
+import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=19";
+import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=19";
+import { icon } from "./icons.js?v=19";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
 export function yen(amount){return `${new Intl.NumberFormat("ja-JP").format(amount)}円`;}
@@ -45,7 +45,7 @@ export function renderMoneyDashboard(data) {
   const recent = [...cash].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || "").localeCompare(a.createdAt || "")).slice(0, 5);
   const shortDay = (key) => `${Number(key.slice(5, 7))}月${Number(key.slice(8))}日`;
   return `<section class="wallet-hero money-overview-hero"><span>${icon("wallet", 25)} 現在の財布残高</span><strong>${yen(balance)}</strong><small>現金の入出金だけを反映</small><button data-action="money-edit-wallet">${data.wallet ? "初期残高を変更" : "初期残高を設定"}</button></section>
-    <div class="money-quick-actions"><button data-action="money-add-transaction" data-type="expense">${icon("plus", 19)}<span>現金支出</span></button><button data-action="money-add-transaction" data-type="income">${icon("plus", 19)}<span>現金収入</span></button></div>
+    <div class="money-quick-actions"><button data-action="money-add-transaction" data-type="expense">${icon("plus", 19)}<span>現金を記録</span></button></div>
     <section class="content-card money-insight-card"><div class="section-heading"><div><span class="section-kicker green">財布の動き</span><h2>この期間の現金収支</h2></div><button class="text-link" data-action="money-mode" data-mode="wallet">カレンダー ${icon("chevron", 14)}</button></div><p class="money-insight-period">${shortDay(period.start)}〜${shortDay(period.end)}${period.nextPayday ? ` · 次の給料日 ${shortDay(period.nextPayday.actual)}` : ""}</p><div class="money-insight-totals"><div><span>収入</span><strong class="income">+${yen(summary.income)}</strong></div><div><span>支出</span><strong class="expense">−${yen(summary.expense)}</strong></div><div><span>差し引き</span><strong>${summary.net < 0 ? "−" : "+"}${yen(Math.abs(summary.net))}</strong></div></div><p class="field-help">固定費・サブスクは財布残高に反映しません。</p></section>
     <section class="content-card money-insight-card"><div class="section-heading"><div><span class="section-kicker green">支出の内訳</span><h2>カテゴリ別</h2></div><button class="text-link" data-action="money-mode" data-mode="categories">編集 ${icon("chevron", 14)}</button></div>${expenses.length ? expenses.map((item) => `<div class="money-category-stat">${categoryBadge(item)}<span class="money-category-stat-main"><span><strong>${escapeMoney(item.label)}</strong><b>${yen(item.amount)}</b></span><i><em style="width:${Math.max(3, Math.round(item.amount / largest * 100))}%"></em></i></span></div>`).join("") : `<p class="settings-copy">この期間の現金支出はありません。</p>`}<button class="inline-add" data-action="money-mode" data-mode="categories">${icon("plus", 16)} カテゴリ・アイコンを管理</button></section>
     <section class="content-card"><div class="section-heading"><h2>最近の現金の動き</h2><button class="text-link" data-action="money-mode" data-mode="ledger">全記録を見る ${icon("chevron", 14)}</button></div>${renderCashTrend(cash)}${recent.length ? recent.map((item) => transactionRow(item, data.categories)).join("") : `<p class="settings-copy">まだ現金の記録はありません。</p>`}</section>`;
@@ -65,7 +65,7 @@ export function renderWallet(data) {
     : "給料日の設定前は暦月で集計します。";
   return `<section class="wallet-hero"><span>${icon("wallet", 27)} 現金の財布</span><strong>${yen(balance)}</strong><small>現金の入出金だけを反映した残高</small><div class="wallet-hero-actions"><button data-action="money-edit-wallet">${data.wallet ? "初期残高を変更" : "初期残高を設定"}</button><button data-action="money-edit-payday">${data.wallet?.salaryDay ? "給料日を変更" : "給料日を設定"}</button></div></section>
     <section class="content-card pay-period-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前の期間">${icon("arrowLeft", 20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="次の期間">${icon("chevron", 20)}</button></div><p class="pay-period-range">${shortDay(period.start)}〜${shortDay(period.end)} <span>締切 ${shortDay(period.end)}</span></p><p class="pay-period-note">${nextPayday}</p><p class="pay-period-note">${salaryRule}</p>${period.provisional ? `<p class="pay-period-warning">2028年以降の祝日は公式発表前の暫定計算です。</p>` : ""}</section>
-    <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 現金支出</button><button class="secondary-button" data-action="money-add-transaction" data-type="income">${icon("plus", 17)} 現金収入</button></div>
+    <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 現金を記録</button></div>
     ${renderLedgerCalendar({ ...data, transactions: cash }, summary, period)}`;
 }
 
@@ -119,7 +119,7 @@ export function renderLedger(data) {
   })).filter((item) => item.amount > 0).sort((a, b) => b.amount - a.amount);
   return `<section class="content-card ledger-month-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft", 20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron", 20)}</button></div></section>
     <p class="field-help">現金以外も含む記録一覧です。財布の動きは「カレンダー」で確認できます。</p>
-    <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 支出</button><button class="secondary-button" data-action="money-add-transaction" data-type="income">${icon("plus", 17)} 収入</button></div>
+    <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 収支を記録</button></div>
     <section class="content-card"><div class="money-summary ledger-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div><div><span>収支</span><b>${summary.net < 0 ? "−" : "+"}${yen(Math.abs(summary.net))}</b></div></div></section>
     <section class="content-card"><div class="section-heading"><h2>支出カテゴリ</h2><button class="text-link" data-action="money-mode" data-mode="categories">カテゴリを編集 ${icon("chevron", 14)}</button></div>${categories.length ? categories.map((item) => `<div class="money-category">${categoryBadge(item)}<span>${escapeMoney(item.label)}</span><strong>${yen(item.amount)}</strong></div>`).join("") : `<p class="settings-copy">この月の支出はありません。</p>`}</section>
     <section class="content-card"><div class="section-heading"><h2>収支の記録</h2><span class="section-count">${sorted.length}件</span></div>${sorted.length ? sorted.map((item) => transactionRow(item, data.categories)).join("") : `<p class="settings-copy">この月の記録はありません。</p>`}</section>`;

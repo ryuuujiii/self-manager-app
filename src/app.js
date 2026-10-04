@@ -1,16 +1,16 @@
-import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=18";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=18";
-import { icon } from "./icons.js?v=18";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=18";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=18";
-import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=18";
-import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=18";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=18";
-import { payPeriodForDate } from "./pay-cycle.js?v=18";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=18";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=18";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=18";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=18";
+import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=19";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=19";
+import { icon } from "./icons.js?v=19";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=19";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=19";
+import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=19";
+import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=19";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=19";
+import { payPeriodForDate } from "./pay-cycle.js?v=19";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=19";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=19";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=19";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=19";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -158,7 +158,7 @@ function renderEventRow(event) {
 function renderShiftAgendaRow(shift) {
   const workplace = state.workplaces.find((item) => item.id === shift.workplaceId);
   if (!workplace) return "";
-  return `<button class="event-row" data-action="work-edit-shift" data-id="${escapeHTML(shift.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(workplace.name)}</strong><span>${escapeHTML(displayDate(shift.date))} · ${escapeHTML(shift.start)}〜${escapeHTML(shift.end)} · ${Math.round(shiftMinutes(shift) / 6) / 10}時間 · 見込み ${yen(shiftPay(shift, workplace))}</span></span>${icon("chevron", 16)}</button>`;
+  return `<button class="event-row" data-action="work-edit-shift" data-id="${escapeHTML(shift.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(workplace.name)}</strong><span>${escapeHTML(displayDate(shift.date))} · ${escapeHTML(shift.start)}〜${escapeHTML(shift.end)} · ${Math.round(shiftMinutes(shift) / 6) / 10}時間 · ${workplace.transportPerDay ? "時給分" : "見込み"} ${yen(shiftPay(shift, workplace))}</span></span>${icon("chevron", 16)}</button>`;
 }
 
 function renderTodoRow(todo, overdue=false) {
@@ -528,7 +528,7 @@ async function saveWorkForm(form) {
   const now = new Date().toISOString();
   const common = { id: existing?.id || crypto.randomUUID(), createdAt: existing?.createdAt || now, updatedAt: now };
   const record = kind === "workplace"
-    ? { ...common, name: String(fields.get("name") || "").trim(), hourlyWage: Number(fields.get("hourlyWage")), closingDay: Number(fields.get("closingDay")), payday: fields.get("payday") ? Number(fields.get("payday")) : null, payMonthOffset: fields.get("payMonthOffset") === "auto" ? null : Number(fields.get("payMonthOffset")), holidayShift: String(fields.get("holidayShift") || "previous"), location: String(fields.get("location") || "").trim(), note: String(fields.get("note") || "").trim() }
+    ? { ...common, name: String(fields.get("name") || "").trim(), hourlyWage: Number(fields.get("hourlyWage")), transportPerDay: fields.get("transportPerDay") ? Number(fields.get("transportPerDay")) : 0, closingDay: Number(fields.get("closingDay")), payday: fields.get("payday") ? Number(fields.get("payday")) : null, payMonthOffset: fields.get("payMonthOffset") === "auto" ? null : Number(fields.get("payMonthOffset")), holidayShift: String(fields.get("holidayShift") || "previous"), location: String(fields.get("location") || "").trim(), note: String(fields.get("note") || "").trim() }
     : { ...common, workplaceId: String(fields.get("workplaceId") || ""), date: String(fields.get("date") || ""), start: String(fields.get("start") || ""), end: String(fields.get("end") || ""), breakMinutes: Number(fields.get("breakMinutes")), note: String(fields.get("note") || "").trim() };
   const error = kind === "workplace" ? validateWorkplace(record) : validateWorkShift(record, state.workplaces);
   if (error) { form.querySelector("#work-form-error").textContent = error; return; }
@@ -712,7 +712,7 @@ root.addEventListener("click", async (event) => {
   const action = button.dataset.action;
   if ((action === "close-editor" || action === "money-close-editor" || action === "money-close-category" || action === "work-close-editor" || action === "life-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
   try {
-    if (action === "tab") { state.tab = button.dataset.tab; state.page = null; state.editor = null; state.moneyEditor = null; state.moneyCategoryEditor = null; state.workEditor = null; state.lifeEditor = null; render(); window.scrollTo(0, 0); }
+    if (action === "tab") { const selected=button.dataset.tab; if(state.tab===selected&&!state.page){if(selected==="schedule")state.scheduleMode="calendar";else if(selected==="money")state.moneyMode="overview";else if(selected==="work")state.workMode="month";else if(selected==="life")state.lifeMode="today";} state.tab = selected; state.page = null; state.editor = null; state.moneyEditor = null; state.moneyCategoryEditor = null; state.workEditor = null; state.lifeEditor = null; render(); window.scrollTo(0, 0); }
     else if (action === "settings") { state.page = "settings"; render(); }
     else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
@@ -804,7 +804,8 @@ root.addEventListener("change", async (event) => {
     const checked=form.querySelector('input[name="category"]:checked')?.value;
     const selected=moneyCategoryCatalog(categories,kind).some((item)=>item.id===checked)?checked:null;
     form.querySelector(".money-entry-category-grid").innerHTML=renderMoneyCategoryChoices(selected,categories,kind);
-    form.querySelector(".money-entry-amount-label").textContent=kind==="income"?"収入":"支出";
+    form.querySelector(".money-entry-amount-label").textContent=kind==="income"?"＋ 収入":"− 支出";
+    form.querySelector(".money-entry-amount-card").dataset.type=kind;
     form.querySelector(".money-entry-submit").textContent=form.dataset.id?"変更を保存":kind==="income"?"収入を入力する":"支出を入力する";
     form.querySelectorAll('[data-action="money-add-category"]').forEach((button)=>button.dataset.kind=kind);
     updateMoneyEntryButton(form);
