@@ -168,7 +168,10 @@ svg { flex: none; }
 .work-summary-card small { color: #e7fff3; font-size: 10px; line-height: 1.5; }
 .work-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .work-calendar { padding: 13px 10px; }
-.work-dot { background: #f28b54; }
+.work-calendar .day-cell { min-width: 0; min-height: 76px; gap: 4px; padding: 6px 2px; }
+.work-cell-shifts { display: grid; justify-items: center; gap: 2px; width: 100%; min-width: 0; }
+.work-cell-time { display: grid; justify-items: center; width: 100%; max-width: 46px; padding: 3px 1px; border-left: 2px solid #df7940; border-radius: 5px; color: #934322; background: #fce6d6; font-size: 10px; font-weight: 850; line-height: 1.12; font-variant-numeric: tabular-nums; }
+.work-cell-more { color: #a76540; font-size: 8px; font-weight: 800; line-height: 1; }
 .work-day-detail { padding: 16px 7px 3px; }
 .work-shift-row, .workplace-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 62px; padding: 9px 2px; border: 0; border-bottom: 1px solid #edf2ee; color: #84938a; background: none; text-align: left; }
 .work-shift-row:last-of-type, .workplace-row:last-of-type { border-bottom: 0; }
@@ -274,7 +277,7 @@ svg { flex: none; }
 .editor-sheet form { display: grid; gap: 12px; }
 .field { display: grid; gap: 6px; color: #4d6255; font-size: 11px; font-weight: 800; }
 .field small { color: #a8b4ac; font-size: 10px; font-weight: 500; }
-.field input, .field select, .field textarea { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #dee8df; border-radius: 10px; outline: 0; color: #253a2d; background: white; font-size: 14px; }
+.field input, .field select, .field textarea { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #dee8df; border-radius: 10px; outline: 0; color: #253a2d; background: white; font-size: 16px; }
 .field textarea { resize: vertical; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: #14ba7a; box-shadow: 0 0 0 3px #14ba7a1c; }
 .toggle-field { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; font-weight: 800; }
@@ -570,11 +573,11 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .money-entry-rows { overflow: hidden; margin-bottom: 24px; padding: 0 15px; border: 1px solid #e5ebe5; border-radius: 15px; background: #fff; }
 .money-entry-row { display: grid; grid-template-columns: 55px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 61px; color: #50665b; font-size: 13px; font-weight: 800; }
 .money-entry-row + .money-entry-row { border-top: 1px solid #edf1eb; }
-.money-entry-row > input { width: 100%; min-width: 0; height: 44px; padding: 0 5px; border: 0; outline: 0; color: #30493d; background: transparent; font-size: 14px; font-weight: 500; }
+.money-entry-row > input { width: 100%; min-width: 0; height: 44px; padding: 0 5px; border: 0; outline: 0; color: #30493d; background: transparent; font-size: 16px; font-weight: 500; }
 .money-entry-row > input::placeholder { color: #a4b3a8; }
 .money-entry-date { display: flex; align-items: center; min-width: 0; }
 .money-entry-date button { display: grid; flex: none; place-items: center; width: 28px; height: 38px; padding: 0; border: 0; color: #638071; background: none; }
-.money-entry-date input { flex: 1; min-width: 0; height: 41px; padding: 0 2px; border: 0; color: #304c3f; background: transparent; font-size: 13px; font-weight: 750; text-align: center; }
+.money-entry-date input { flex: 1; min-width: 0; height: 41px; padding: 0 2px; border: 0; color: #304c3f; background: transparent; font-size: 16px; font-weight: 750; text-align: center; }
 .money-entry-category-heading { display: flex; justify-content: space-between; align-items: end; gap: 8px; margin-bottom: 14px; }
 .money-section-index { display: block; margin-bottom: 4px; color: #70a28c; font-size: 10px; font-weight: 900; letter-spacing: .08em; }
 .money-entry-category-heading h3 { margin: 0; color: #2c4639; font-size: 18px; }
@@ -588,7 +591,7 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .money-entry-category:has(input:checked) .money-entry-category-check { display: block; }
 .money-entry-cash-note { margin: 16px 0 0; color: #6e8272; font-size: 11px; }
 .money-entry-payment { display: grid; gap: 8px; margin-top: 17px; color: #607367; font-size: 12px; font-weight: 800; }
-.money-entry-payment select { min-height: 46px; padding: 8px 11px; border: 1px solid #dceae2; border-radius: 8px; background: #fff; font-size: 14px; }
+.money-entry-payment select { min-height: 46px; padding: 8px 11px; border: 1px solid #dceae2; border-radius: 8px; background: #fff; font-size: 16px; }
 .money-full-footer { flex: none; padding: 11px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid #e4ebe4; background: #fff; }
 .money-full-footer .form-error { min-height: 0; margin-bottom: 6px; }
 .money-full-footer .save-button { min-height: 52px; border-color: #205c4c; border-radius: 13px; color: #fff; background: #205c4c; font-size: 15px; box-shadow: 0 4px 0 #133e33; }
@@ -603,7 +606,7 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .money-category-details { overflow: hidden; padding: 0 15px; border: 1px solid #e2eae2; border-radius: 15px; background: #fff; }
 .money-category-name-row { display: grid; grid-template-columns: 67px minmax(0, 1fr); align-items: center; min-height: 59px; color: #526d5d; font-size: 13px; font-weight: 800; }
 .money-category-name-row + .money-category-name-row { border-top: 1px solid #edf1ed; }
-.money-category-name-row input, .money-category-name-row select { width: 100%; min-width: 0; height: 48px; padding: 0 3px; border: 0; outline: 0; color: #334b40; background: transparent; font-size: 14px; }
+.money-category-name-row input, .money-category-name-row select { width: 100%; min-width: 0; height: 48px; padding: 0 3px; border: 0; outline: 0; color: #334b40; background: transparent; font-size: 16px; }
 .money-category-name-row input::placeholder { color: #a9b9aa; }
 .money-category-name-row strong { color: #3d5447; font-size: 14px; }
 .money-pick-section { min-width: 0; margin: 24px 0 0; padding: 0; border: 0; }

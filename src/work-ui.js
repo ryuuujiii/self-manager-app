@@ -1,7 +1,7 @@
-import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=19";
-import { icon } from "./icons.js?v=19";
-import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=19";
-import { periodGrid } from "./pay-cycle.js?v=19";
+import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=20";
+import { icon } from "./icons.js?v=20";
+import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=20";
+import { periodGrid } from "./pay-cycle.js?v=20";
 
 const yen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -17,7 +17,13 @@ function calendar(data, workplace, summary) {
   const days = periodGrid(summary.start, summary.end);
   const chosen = shiftsForDay(summary.shifts, data.selectedDate);
   const closingLabel = `${monthLabel(summary.end.slice(0, 7))}${Number(summary.end.slice(-2))}日締め`;
-  return `<section class="content-card work-calendar"><div class="month-control"><button class="icon-button" data-action="work-prev-month" aria-label="前の期間">${icon("arrowLeft", 20)}</button><h2>${closingLabel}</h2><button class="icon-button" data-action="work-next-month" aria-label="次の期間">${icon("chevron", 20)}</button></div><p class="work-period-range">${shortDate(summary.start)}〜${shortDate(summary.end)} <span>締め日 ${shortDate(summary.end)}</span></p><div class="weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div><div class="calendar-grid">${days.map((key) => { const dayShifts = shiftsForDay(summary.shifts, key); return `<button class="day-cell ${key >= summary.start && key <= summary.end ? "" : "outside"} ${key === dateKey() ? "today" : ""} ${key === data.selectedDate ? "selected" : ""} ${key.endsWith("-01") ? "month-start" : ""}" data-action="work-select-day" data-date="${key}" aria-label="${escape(key)} シフト${dayShifts.length}件"><span>${calendarDayLabel(key)}</span><span class="day-dots">${dayShifts.slice(0, 3).map(() => '<i class="work-dot"></i>').join("")}</span></button>`; }).join("")}</div><div class="work-day-detail"><div class="section-heading"><h2>${escape(formatDay(data.selectedDate, { month: "long", day: "numeric", weekday: "short" }))}</h2><span class="section-count">${chosen.length}件</span></div>${chosen.length ? chosen.map((shift) => shiftRow(shift, workplace)).join("") : '<p class="settings-copy">この日のシフトはありません。</p>'}<button class="inline-add" data-action="work-add-shift" data-lock-date="true">${icon("plus", 17)} この日にシフトを追加</button></div></section>`;
+  const cells = days.map((key) => {
+    const dayShifts = shiftsForDay(summary.shifts, key);
+    const first = dayShifts[0];
+    const shiftLabel = dayShifts.length ? ` シフト${dayShifts.length}件 ${dayShifts.map((shift) => `${shift.start}〜${shift.end}`).join("、")}` : " シフトなし";
+    return `<button class="day-cell ${key >= summary.start && key <= summary.end ? "" : "outside"} ${key === dateKey() ? "today" : ""} ${key === data.selectedDate ? "selected" : ""} ${key.endsWith("-01") ? "month-start" : ""}" data-action="work-select-day" data-date="${key}" aria-label="${escape(key + shiftLabel)}"><span>${calendarDayLabel(key)}</span>${first ? `<span class="work-cell-shifts"><span class="work-cell-time"><span>${escape(first.start)}–</span><span>${escape(first.end)}</span></span>${dayShifts.length > 1 ? `<span class="work-cell-more">ほか${dayShifts.length - 1}件</span>` : ""}</span>` : ""}</button>`;
+  }).join("");
+  return `<section class="content-card work-calendar"><div class="month-control"><button class="icon-button" data-action="work-prev-month" aria-label="前の期間">${icon("arrowLeft", 20)}</button><h2>${closingLabel}</h2><button class="icon-button" data-action="work-next-month" aria-label="次の期間">${icon("chevron", 20)}</button></div><p class="work-period-range">${shortDate(summary.start)}〜${shortDate(summary.end)} <span>締め日 ${shortDate(summary.end)}</span></p><div class="weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div><div class="calendar-grid">${cells}</div><div class="work-day-detail"><div class="section-heading"><h2>${escape(formatDay(data.selectedDate, { month: "long", day: "numeric", weekday: "short" }))}</h2><span class="section-count">${chosen.length}件</span></div>${chosen.length ? chosen.map((shift) => shiftRow(shift, workplace)).join("") : '<p class="settings-copy">この日のシフトはありません。</p>'}<button class="inline-add" data-action="work-add-shift" data-lock-date="true">${icon("plus", 17)} この日にシフトを追加</button></div></section>`;
 }
 
 function shiftList(data, workplace, summary) {

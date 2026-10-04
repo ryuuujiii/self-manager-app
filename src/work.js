@@ -1,6 +1,6 @@
-import { isValidDateKey } from "./domain.js?v=19";
-import { addDays } from "./domain.js?v=19";
-import { nominalPayday, paydayForMonth, shiftMonth } from "./pay-cycle.js?v=19";
+import { isValidDateKey } from "./domain.js?v=20";
+import { addDays } from "./domain.js?v=20";
+import { nominalPayday, paydayForMonth, shiftMonth } from "./pay-cycle.js?v=20";
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
