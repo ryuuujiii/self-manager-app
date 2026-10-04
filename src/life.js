@@ -1,4 +1,4 @@
-import { addDays, dateKey, isValidDateKey } from "./domain.js?v=20";
+import { addDays, dateKey, isValidDateKey } from "./domain.js?v=21";
 
 export const CHECKLIST_CATEGORIES = { university: "大学", work: "バイト", outside: "外出", travel: "旅行", other: "その他" };
 export const WISHLIST_CATEGORIES = { daily: "日用品", fashion: "ファッション", digital: "デジタル", hobby: "趣味", other: "その他" };

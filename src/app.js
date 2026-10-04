@@ -1,16 +1,16 @@
-import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=20";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=20";
-import { icon } from "./icons.js?v=20";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=20";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=20";
-import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=20";
-import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=20";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=20";
-import { payPeriodForDate } from "./pay-cycle.js?v=20";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=20";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=20";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=20";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=20";
+import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=21";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=21";
+import { icon } from "./icons.js?v=21";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=21";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=21";
+import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=21";
+import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=21";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=21";
+import { payPeriodForDate } from "./pay-cycle.js?v=21";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=21";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=21";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=21";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=21";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -48,6 +48,7 @@ const state = {
   workSelectedDate: dateKey(),
   workEditor: null,
   moneyMode: "overview",
+  moneyTrendMode: "day",
   moneySelectedDate: null,
   moneyMonth: dateKey().slice(0, 7),
   moneyMonthInitialized: false,
@@ -96,7 +97,7 @@ async function refresh() {
 }
 
 function currentMoneyCategories() { return resolveMoneyCategories(state.moneyCategories, state.transactions, state.fixedCosts); }
-function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, categories: currentMoneyCategories(), mode: state.moneyMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
+function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, categories: currentMoneyCategories(), mode: state.moneyMode, trendMode: state.moneyTrendMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
 function workData() { return { workplaces: state.workplaces, shifts: state.workShifts, workplaceId: state.workWorkplaceId, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
 function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, moneyCategories: currentMoneyCategories(), mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
 
@@ -116,6 +117,11 @@ function header({ eyebrow, title, actions = "", back = false }) {
 function renderHome() {
   const today = dateKey();
   const summary = homeSummary(state.events, state.todos, today);
+  const todayShifts = shiftsForDay(state.workShifts, today);
+  const agenda = [
+    ...summary.todayEvents.map((item) => ({ kind: "event", item, start: item.allDay ? "" : item.start })),
+    ...todayShifts.map((item) => ({ kind: "shift", item, start: item.start }))
+  ].sort((a, b) => a.start.localeCompare(b.start));
   const completedCount = summary.todayTodos.filter((item) => item.completedAt).length;
   const upcomingShift = nextShift(state.workShifts);
   const dueHabits = state.habits.filter((habit) => habitDueOn(habit, today));
@@ -127,10 +133,11 @@ function renderHome() {
       actions: `<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell", 21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings", 21)}</button>`
     })}
     <main class="screen-content">
-      <section class="day-brief" aria-label="今日の見通し"><div class="day-brief-date"><span>${Number(today.slice(5, 7))}月</span><strong>${Number(today.slice(-2))}</strong><span>${weekdayLabel(today)}曜日</span></div><div class="day-brief-body"><span>今日の見通し</span><strong>予定 ${summary.todayEvents.length}件 <i></i> やること ${summary.openCount}件</strong><small>${summary.openCount ? "残りのToDoを確認しましょう。" : summary.todayTodos.length ? "今日のToDoは完了しました。" : "予定やToDoをここで確認できます。"}</small></div></section>
+      <section class="day-brief" aria-label="今日の見通し"><div class="day-brief-date"><span>${Number(today.slice(5, 7))}月</span><strong>${Number(today.slice(-2))}</strong><span>${weekdayLabel(today)}曜日</span></div><div class="day-brief-body"><span>今日の見通し</span><strong>${agenda.length ? `予定・仕事が${agenda.length}件` : "予定・仕事はありません"}</strong><div class="day-brief-counts"><span>予定 <b>${summary.todayEvents.length}</b></span><span>仕事 <b>${todayShifts.length}</b></span><span>ToDo <b>${summary.openCount}</b></span></div></div></section>
       <section class="content-card dashboard-card dashboard-schedule">
-        <div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("calendar", 19)}</span><div><span class="section-kicker">予定</span><h2>今日の予定</h2></div></div><button class="text-link" data-action="goto-schedule">予定を見る ${icon("chevron", 14)}</button></div>
-        ${summary.todayEvents.length ? summary.todayEvents.slice(0, 4).map(renderEventRow).join("") : `<div class="empty-inline"><span class="empty-icon blue">${icon("calendar", 22)}</span><p>今日の予定はありません</p></div>`}
+        <div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("calendar", 19)}</span><div><span class="section-kicker">今日の流れ</span><h2>予定・仕事</h2></div></div><span class="section-count">${agenda.length}件</span></div>
+        ${agenda.length ? agenda.slice(0, 6).map(renderHomeAgendaRow).join("") : `<div class="empty-inline"><span class="empty-icon blue">${icon("calendar", 22)}</span><p>今日の予定・シフトはありません</p></div>`}
+        ${agenda.length > 6 ? `<button class="text-link home-agenda-more" data-action="goto-schedule">ほか${agenda.length - 6}件を見る ${icon("chevron", 14)}</button>` : ""}
         <button class="inline-add" data-action="add-event">${icon("plus", 17)} 予定を追加</button>
       </section>
       <section class="content-card dashboard-card dashboard-todo">
@@ -139,11 +146,20 @@ function renderHome() {
         ${summary.todayTodos.length ? summary.todayTodos.slice(0, 5).map((todo) => renderTodoRow(todo, false)).join("") : `<div class="empty-inline"><span class="empty-icon pink">${icon("check", 22)}</span><p>今日のToDoはありません</p></div>`}
         <button class="inline-add" data-action="add-todo">${icon("plus", 17)} ToDoを追加</button>
       </section>
-      <section class="content-card dashboard-card dashboard-work"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("work", 19)}</span><div><span class="section-kicker">仕事</span><h2>次の仕事</h2></div></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${upcomingShift ? renderShiftAgendaRow(upcomingShift) : '<div class="empty-inline"><span class="empty-icon">' + icon("work", 22) + '</span><p>今後のシフトはありません</p></div>'}</section>
+      ${upcomingShift && upcomingShift.date > today ? `<section class="content-card dashboard-card dashboard-work"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("work", 19)}</span><div><span class="section-kicker">この先</span><h2>次の仕事</h2></div></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${renderShiftAgendaRow(upcomingShift)}</section>` : ""}
       <section class="content-card dashboard-card dashboard-money"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("money", 19)}</span><div><span class="section-kicker">お金</span><h2>現金の財布</h2></div></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
       <section class="content-card dashboard-card dashboard-life"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("life", 19)}</span><div><span class="section-kicker">生活</span><h2>今日の習慣</h2></div></div><button class="text-link" data-action="goto-life">生活を見る ${icon("chevron", 14)}</button></div><div class="life-home-summary"><strong>${doneHabits}/${dueHabits.length}</strong><span>今日の習慣を達成</span></div>${dueHabits.length ? dueHabits.slice(0, 3).map((habit) => `<div class="life-home-item">${habitProgress(habit, state.habitRecords, today).todayDone ? "✓" : "○"} ${escapeHTML(habit.title)}</div>`).join("") : '<p class="life-note">習慣を登録すると、ここでも確認できます。</p>'}</section>
     </main>
   </div>`;
+}
+
+function renderHomeAgendaRow({ kind, item }) {
+  if (kind === "shift") {
+    const workplace = state.workplaces.find((place) => place.id === item.workplaceId);
+    return `<button class="home-agenda-row work" data-action="work-edit-shift" data-id="${escapeHTML(item.id)}"><span class="home-agenda-time">${escapeHTML(item.start)}</span><span class="home-agenda-main"><strong>${escapeHTML(workplace?.name || "仕事")}</strong><small>仕事 · ${escapeHTML(item.end)}まで</small></span>${icon("chevron", 15)}</button>`;
+  }
+  const category = CATEGORIES[item.category] || CATEGORIES.other;
+  return `<button class="home-agenda-row event" data-action="edit-event" data-id="${escapeHTML(item.id)}" data-date="${escapeHTML(item.occurrenceDate || item.date)}"><span class="home-agenda-time">${item.allDay ? "終日" : escapeHTML(item.start)}</span><span class="home-agenda-main"><strong>${escapeHTML(item.title)}</strong><small>予定 · ${escapeHTML(category.label)}${item.allDay ? "" : ` · ${escapeHTML(item.end)}まで`}</small></span>${icon("chevron", 15)}</button>`;
 }
 
 function renderEventRow(event) {
@@ -184,7 +200,7 @@ function weekStart(key) {
 
 function renderWeek() {
   const first=weekStart(state.selectedDate),days=Array.from({length:7},(_,i)=>addDays(first,i));
-  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length+fixedCostsForDay(state.fixedCosts,key).length+shiftsForDay(state.workShifts,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""} ${key===dateKey()?"today":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length+fixedCostsForDay(state.fixedCosts,key).length+shiftsForDay(state.workShifts,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
 }
 
 function renderDay() {
@@ -218,7 +234,7 @@ function renderTodoList() {
 
 function renderSchedule() {
   const modes=[["calendar","月"],["week","週"],["day","日"],["list","一覧"],["todos","ToDo"]];
-  return `<div class="screen schedule-screen">${header({eyebrow:"予定とやることをひとつに",title:"予定",actions:`<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell",21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings",21)}</button>`})}<main class="screen-content"><div class="segmented schedule-modes" role="tablist" aria-label="予定の表示">${modes.map(([mode,label])=>`<button role="tab" aria-selected="${state.scheduleMode===mode}" class="${state.scheduleMode===mode?"active":""}" data-action="mode" data-mode="${mode}">${label}</button>`).join("")}</div>${state.scheduleMode==="calendar"?renderCalendar():state.scheduleMode==="week"?renderWeek():state.scheduleMode==="day"?renderDay():state.scheduleMode==="list"?renderEventList():renderTodoList()}<div class="schedule-actions"><button class="secondary-button" data-action="add-todo">${icon("plus",18)} ToDo</button><button class="primary-button" data-action="add-event">${icon("plus",18)} 予定を追加</button></div></main></div>`;
+  return `<div class="screen schedule-screen">${header({eyebrow:"予定とやることをひとつに",title:"予定",actions:`<button class="icon-button" data-action="reminders" aria-label="リマインダー">${icon("bell",21)}</button><button class="icon-button" data-action="settings" aria-label="設定">${icon("settings",21)}</button>`})}<main class="screen-content"><div class="segmented schedule-modes" role="tablist" aria-label="予定の表示">${modes.map(([mode,label])=>`<button role="tab" aria-selected="${state.scheduleMode===mode}" class="${state.scheduleMode===mode?"active":""}" data-action="mode" data-mode="${mode}">${label}</button>`).join("")}</div>${state.scheduleMode==="todos"?"":`<div class="today-anchor"><span><b>今日</b> ${escapeHTML(displayDate(dateKey()))}</span><button data-action="today">今日を表示</button></div>`}${state.scheduleMode==="calendar"?renderCalendar():state.scheduleMode==="week"?renderWeek():state.scheduleMode==="day"?renderDay():state.scheduleMode==="list"?renderEventList():renderTodoList()}<div class="schedule-actions"><button class="secondary-button" data-action="add-todo">${icon("plus",18)} ToDo</button><button class="primary-button" data-action="add-event">${icon("plus",18)} 予定を追加</button></div></main></div>`;
 }
 
 function renderReminders() {
@@ -716,7 +732,7 @@ root.addEventListener("click", async (event) => {
     else if (action === "settings") { state.page = "settings"; render(); }
     else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
-    else if (action === "goto-schedule") { state.tab = "schedule"; state.scheduleMode = "calendar"; render(); }
+    else if (action === "goto-schedule") { state.tab = "schedule"; state.scheduleMode = "calendar"; state.selectedDate = dateKey(); state.year = Number(state.selectedDate.slice(0, 4)); state.month = Number(state.selectedDate.slice(5, 7)) - 1; render(); }
     else if (action === "goto-todos") { state.tab = "schedule"; state.scheduleMode = "todos"; render(); }
     else if (action === "goto-money") { state.tab = "money"; state.moneyMode = "overview"; render(); }
     else if (action === "goto-work") { state.tab = "work"; state.workMode = "month"; render(); }
@@ -729,7 +745,9 @@ root.addEventListener("click", async (event) => {
     else if (action === "next-month") changeMonth(1);
     else if (action === "select-day") { state.selectedDate = button.dataset.date; state.year = Number(state.selectedDate.slice(0,4)); state.month = Number(state.selectedDate.slice(5,7))-1; render(); }
     else if (action === "money-mode") { state.moneyMode = button.dataset.mode; render(); window.scrollTo(0, 0); }
+    else if (action === "money-trend-mode") { state.moneyTrendMode = button.dataset.mode === "month" ? "month" : "day"; render(); }
     else if (action === "money-select-day") { state.moneySelectedDate = button.dataset.date; state.moneyMonth = payPeriodForDate(state.moneySelectedDate, moneyData().wallet); render(); }
+    else if (action === "money-today") { state.moneySelectedDate = dateKey(); state.moneyMonth = payPeriodForDate(state.moneySelectedDate, moneyData().wallet); render(); }
     else if (action === "money-clear-day") { state.moneySelectedDate = null; render(); }
     else if (action === "money-prev-month") shiftMoneyMonth(-1);
     else if (action === "money-next-month") shiftMoneyMonth(1);
@@ -750,6 +768,7 @@ root.addEventListener("click", async (event) => {
     else if (action === "work-mode") { state.workMode = button.dataset.mode; render(); }
     else if (action === "work-prev-month") shiftWorkMonth(-1);
     else if (action === "work-next-month") shiftWorkMonth(1);
+    else if (action === "work-today") { state.workSelectedDate = dateKey(); state.workMonth = workPeriodForDate(state.workSelectedDate, state.workplaces.find((item) => item.id === state.workWorkplaceId)); state.workMode = "month"; render(); }
     else if (action === "work-select-day") { state.workSelectedDate = button.dataset.date; state.workMonth = workPeriodForDate(state.workSelectedDate, state.workplaces.find((item) => item.id === state.workWorkplaceId)); render(); }
     else if (action === "work-add-workplace") openWorkEditor("workplace");
     else if (action === "work-edit-workplace") openWorkEditor("workplace", button.dataset.id);

@@ -1,10 +1,11 @@
-import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=20";
-import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=20";
-import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=20";
-import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=20";
-import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=20";
-import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=20";
-import { icon } from "./icons.js?v=20";
+import { cashBalance, fixedCostSummary, monthSummary } from "./money.js?v=21";
+import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=21";
+import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=21";
+import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=21";
+import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=21";
+import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=21";
+import { icon } from "./icons.js?v=21";
+import { renderExpenseDonut, renderMoneyTrend } from "./money-charts.js?v=21";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
 export function yen(amount){return `${new Intl.NumberFormat("ja-JP").format(amount)}円`;}
@@ -66,6 +67,7 @@ export function renderWallet(data) {
   return `<section class="wallet-hero"><span>${icon("wallet", 27)} 現金の財布</span><strong>${yen(balance)}</strong><small>現金の入出金だけを反映した残高</small><div class="wallet-hero-actions"><button data-action="money-edit-wallet">${data.wallet ? "初期残高を変更" : "初期残高を設定"}</button><button data-action="money-edit-payday">${data.wallet?.salaryDay ? "給料日を変更" : "給料日を設定"}</button></div></section>
     <section class="content-card pay-period-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前の期間">${icon("arrowLeft", 20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="次の期間">${icon("chevron", 20)}</button></div><p class="pay-period-range">${shortDay(period.start)}〜${shortDay(period.end)} <span>締切 ${shortDay(period.end)}</span></p><p class="pay-period-note">${nextPayday}</p><p class="pay-period-note">${salaryRule}</p>${period.provisional ? `<p class="pay-period-warning">2028年以降の祝日は公式発表前の暫定計算です。</p>` : ""}</section>
     <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 現金を記録</button></div>
+    <div class="today-anchor"><span><b>今日</b> ${escapeMoney(formatDay(dateKey(), { month: "long", day: "numeric", weekday: "short" }))}</span><button data-action="money-today">今日を表示</button></div>
     ${renderLedgerCalendar({ ...data, transactions: cash }, summary, period)}`;
 }
 
@@ -83,7 +85,7 @@ export function renderLedgerCalendar(data, summary, period) {
     const selected = date === data.selectedDate;
     const payday = date === period.currentPayday?.actual || date === period.nextPayday?.actual;
     const closing = date === period.end && Boolean(period.nextPayday);
-    return `<button class="ledger-day ${current ? "" : "outside"} ${selected ? "selected" : ""} ${payday ? "payday" : ""} ${closing ? "closing" : ""} ${date.endsWith("-01") ? "month-start" : ""}" data-action="money-select-day" data-date="${date}" aria-label="${date} 収入${yen(value.income)} 支出${yen(value.expense)}${payday ? " 給料日" : ""}${closing ? " 締切日" : ""}" aria-pressed="${selected}">
+    return `<button class="ledger-day ${current ? "" : "outside"} ${selected ? "selected" : ""} ${date === dateKey() ? "today" : ""} ${payday ? "payday" : ""} ${closing ? "closing" : ""} ${date.endsWith("-01") ? "month-start" : ""}" data-action="money-select-day" data-date="${date}" aria-label="${date} 収入${yen(value.income)} 支出${yen(value.expense)}${date === dateKey() ? " 今日" : ""}${payday ? " 給料日" : ""}${closing ? " 締切日" : ""}" aria-pressed="${selected}">
       <span class="ledger-date">${calendarDayLabel(date)}</span>
       <span class="ledger-day-amount income">${value.income ? new Intl.NumberFormat("ja-JP").format(value.income) : "&nbsp;"}</span>
       <span class="ledger-day-amount expense">${value.expense ? new Intl.NumberFormat("ja-JP").format(value.expense) : "&nbsp;"}</span>
@@ -114,14 +116,12 @@ export function renderLedgerCalendar(data, summary, period) {
 export function renderLedger(data) {
   const summary = monthSummary(data.transactions, data.month);
   const sorted = [...summary.records].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
-  const categories = moneyCategoryCatalog(data.categories).map((category) => ({ ...category,
-    amount: sorted.filter((item) => item.type === "expense" && item.category === category.id).reduce((sum, item) => sum + item.amount, 0)
-  })).filter((item) => item.amount > 0).sort((a, b) => b.amount - a.amount);
   return `<section class="content-card ledger-month-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft", 20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron", 20)}</button></div></section>
-    <p class="field-help">現金以外も含む記録一覧です。財布の動きは「カレンダー」で確認できます。</p>
+    <p class="field-help">この画面の統計と一覧には、現金・現金以外の記録を含みます。財布の現金だけの動きは「概要」または「カレンダー」で確認できます。</p>
     <div class="money-action-grid"><button class="secondary-button" data-action="money-add-transaction" data-type="expense">${icon("plus", 17)} 収支を記録</button></div>
     <section class="content-card"><div class="money-summary ledger-summary"><div><span>収入</span><b class="income">${yen(summary.income)}</b></div><div><span>支出</span><b class="expense">${yen(summary.expense)}</b></div><div><span>収支</span><b>${summary.net < 0 ? "−" : "+"}${yen(Math.abs(summary.net))}</b></div></div></section>
-    <section class="content-card"><div class="section-heading"><h2>支出カテゴリ</h2><button class="text-link" data-action="money-mode" data-mode="categories">カテゴリを編集 ${icon("chevron", 14)}</button></div>${categories.length ? categories.map((item) => `<div class="money-category">${categoryBadge(item)}<span>${escapeMoney(item.label)}</span><strong>${yen(item.amount)}</strong></div>`).join("") : `<p class="settings-copy">この月の支出はありません。</p>`}</section>
+    <section class="content-card money-stat-card"><div class="section-heading"><div><span class="section-kicker green">収支の動向</span><h2>${data.trendMode === "month" ? "月ごとの推移" : "日ごとの推移"}</h2></div></div><div class="segmented money-trend-modes" role="group" aria-label="推移の集計単位"><button class="${data.trendMode !== "month" ? "active" : ""}" data-action="money-trend-mode" data-mode="day" aria-pressed="${data.trendMode !== "month"}">日ごと</button><button class="${data.trendMode === "month" ? "active" : ""}" data-action="money-trend-mode" data-mode="month" aria-pressed="${data.trendMode === "month"}">月ごと</button></div><p class="money-stat-caption">${data.trendMode === "month" ? `${moneyMonthLabel(data.month)}までの12か月` : `${moneyMonthLabel(data.month)}の毎日`} · 収入と支出を別々に表示</p>${renderMoneyTrend(data.transactions, data.month, data.trendMode)}</section>
+    <section class="content-card money-stat-card"><div class="section-heading"><div><span class="section-kicker green">支出の内訳</span><h2>カテゴリ別の割合</h2></div><button class="text-link" data-action="money-mode" data-mode="categories">カテゴリを編集 ${icon("chevron", 14)}</button></div><p class="money-stat-caption">${moneyMonthLabel(data.month)}の支出</p>${renderExpenseDonut(data.transactions, data.month, data.categories)}</section>
     <section class="content-card"><div class="section-heading"><h2>収支の記録</h2><span class="section-count">${sorted.length}件</span></div>${sorted.length ? sorted.map((item) => transactionRow(item, data.categories)).join("") : `<p class="settings-copy">この月の記録はありません。</p>`}</section>`;
 }
 export function renderFixed(data){const summary=fixedCostSummary(data.fixedCosts,data.month);const due=[...summary.due].sort((a,b)=>a.dueDate.localeCompare(b.dueDate));return `<section class="content-card"><div class="month-control"><button class="icon-button" data-action="money-prev-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${moneyMonthLabel(data.month)}</h2><button class="icon-button" data-action="money-next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="money-summary"><div><span>今月の支払予定</span><b>${yen(summary.dueTotal)}</b></div><div><span>支払い済み</span><b class="income">${yen(summary.paidTotal)}</b></div><div><span>月あたり目安</span><b>${yen(summary.monthlyEquivalent)}</b></div></div><p class="field-help">年額は12分割して月あたり目安に含めます。支払い済みにしても財布残高は変わりません。</p></section><button class="primary-button money-add" data-action="money-add-fixed">${icon("plus",17)} 固定費・サブスクを追加</button><section class="content-card"><div class="section-heading"><h2>今月の支払日</h2><span class="section-count">${due.length}件</span></div>${due.length?due.map(({record,dueDate})=>`<div class="fixed-due"><button class="todo-check ${record.paidDates?.includes(dueDate)?"checked":""}" data-action="money-toggle-fixed" data-id="${escapeMoney(record.id)}" data-date="${dueDate}" aria-label="${record.paidDates?.includes(dueDate)?"未払いに戻す":"支払い済みにする"}: ${escapeMoney(record.title)}">${record.paidDates?.includes(dueDate)?icon("check",15):""}</button><button class="money-record-main" data-action="money-edit-fixed" data-id="${escapeMoney(record.id)}"><strong>${escapeMoney(record.title)}</strong><small>${escapeMoney(dueDate)} · ${record.cadence==="monthly"?"月額":"年額"}</small></button><b>${yen(record.amount)}</b></div>`).join(""):`<p class="settings-copy">この月の支払い予定はありません。</p>`}</section><section class="content-card"><div class="section-heading"><h2>登録済みの固定費・サブスク</h2></div>${data.fixedCosts.length?[...data.fixedCosts].sort((a,b)=>a.title.localeCompare(b.title,"ja")).map((item)=>`<button class="money-record" data-action="money-edit-fixed" data-id="${escapeMoney(item.id)}">${categoryBadge(moneyCategoryById(item.category,data.categories))}<span class="money-record-main"><strong>${escapeMoney(item.title)}</strong><small>${item.cadence==="monthly"?"毎月":"毎年"}${item.paymentDay}日 · ${escapeMoney(moneyCategoryById(item.category,data.categories).label)}</small></span><b>${yen(item.amount)}</b></button>`).join(""):`<p class="settings-copy">まだ登録されていません。</p>`}</section>`;}

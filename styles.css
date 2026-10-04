@@ -490,6 +490,18 @@ svg { flex: none; }
 .day-brief-body strong { font-size: clamp(15px, 4.1vw, 19px); letter-spacing: -.03em; }
 .day-brief-body i { display: inline-block; width: 3px; height: 3px; margin: 0 4px 4px; border-radius: 50%; background: #a4c7b8; }
 .day-brief-body small { color: #d7e8df; font-size: 11px; }
+.day-brief-counts { display: flex; flex-wrap: wrap; gap: 5px; }
+.day-brief-counts span { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 7px; color: #dceee5; background: #ffffff1d; font-size: 10px; white-space: nowrap; }
+.day-brief-counts b { color: #fff; font-size: 12px; }
+.home-agenda-row { display: grid; grid-template-columns: 47px minmax(0, 1fr) 15px; align-items: center; gap: 9px; width: 100%; min-height: 57px; padding: 8px 2px; border: 0; border-top: 1px solid #ecf0ed; background: #fff; text-align: left; }
+.home-agenda-time { color: #456a8f; font-size: 12px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.home-agenda-row.work .home-agenda-time { color: #aa5b32; }
+.home-agenda-main { display: grid; gap: 3px; min-width: 0; padding-left: 9px; border-left: 3px solid #7a9dd0; }
+.home-agenda-row.work .home-agenda-main { border-left-color: #df8b50; }
+.home-agenda-main strong { overflow: hidden; color: #2e4339; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.home-agenda-main small { color: #819187; font-size: 10px; }
+.home-agenda-row > svg { color: #9aa99f; }
+.home-agenda-more { margin-top: 7px; }
 
 .dashboard-card { --section-accent: #416fa9; --section-soft: #eaf1fa; overflow: hidden; padding-top: 0; border-color: #e7eae7; border-radius: 17px; box-shadow: 0 3px 9px #19372b0a; }
 .dashboard-todo { --section-accent: #bb567b; --section-soft: #fbedf2; }
@@ -626,3 +638,51 @@ body:has(.money-full-sheet) { overflow: hidden; }
   .money-icon-option > span { width: 44px; height: 44px; }
   .money-color-option { width: 38px; height: 38px; }
 }
+
+.money-stat-card { overflow: hidden; }
+.money-trend-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 2px 0 10px; }
+.money-stat-caption { margin: 0 0 14px; color: #708579; font-size: 11px; line-height: 1.5; }
+.money-trend-chart { padding: 12px 10px 9px; border: 1px solid #e5ece8; border-radius: 13px; background: #fafcfb; }
+.money-trend-legend { display: flex; justify-content: flex-end; gap: 13px; color: #637b70; font-size: 11px; font-weight: 750; }
+.money-trend-legend span { display: flex; align-items: center; gap: 5px; }
+.money-trend-legend i { width: 12px; height: 3px; border-radius: 3px; }
+.money-trend-legend i.income { background: #3985c7; }
+.money-trend-legend i.expense { background: #d66672; }
+.money-trend-chart svg { display: block; width: 100%; height: 154px; overflow: visible; }
+.money-trend-gridline { fill: none; stroke: #e7ede9; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.money-trend-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.money-trend-line.income { stroke: #3985c7; }
+.money-trend-line.expense { stroke: #d66672; }
+.money-trend-axis { display: flex; justify-content: space-between; color: #788c80; font-size: 10px; }
+.money-trend-labels { display: flex; justify-content: space-between; gap: 4px; margin-top: 9px; color: #60776a; font-size: 9px; }
+.money-donut-layout { display: grid; gap: 17px; }
+.money-donut { display: grid; place-items: center; width: 176px; height: 176px; margin: 0 auto; border-radius: 50%; background: conic-gradient(var(--donut-slices)); }
+.money-donut > div { display: grid; align-content: center; justify-items: center; width: 117px; height: 117px; border-radius: 50%; background: #fff; text-align: center; }
+.money-donut small { color: #829389; font-size: 11px; }
+.money-donut strong { color: #2b4539; font-size: 18px; }
+.money-donut-legend { display: grid; gap: 8px; }
+.money-donut-legend > div { display: grid; grid-template-columns: 9px minmax(0, 1fr) 35px auto; align-items: center; gap: 7px; min-width: 0; font-size: 11px; }
+.money-donut-legend i { width: 9px; height: 9px; border-radius: 50%; }
+.money-donut-legend span { overflow: hidden; color: #3b5547; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.money-donut-legend strong { color: #355545; text-align: right; }
+.money-donut-legend small { color: #7d8f84; text-align: right; white-space: nowrap; }
+@media (min-width: 520px) {
+  .money-donut-layout { grid-template-columns: 190px minmax(0, 1fr); align-items: center; }
+}
+
+.today-anchor { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 43px; padding: 8px 11px; border: 1px solid #e2eae4; border-radius: 11px; color: #4b6658; background: #f7faf7; font-size: 12px; font-weight: 750; }
+.today-anchor b { margin-right: 5px; color: #177b61; }
+.today-anchor button { flex: none; padding: 5px 8px; border: 0; border-radius: 7px; color: #137b61; background: #e3f3e9; font-size: 11px; font-weight: 850; }
+.calendar-grid .day-cell:nth-child(7n + 1) > span:first-child { color: #c9475b; }
+.calendar-grid .day-cell:nth-child(7n) > span:first-child { color: #3475b5; }
+.calendar-grid .day-cell.selected:nth-child(7n + 1) > span:first-child { color: #c9475b; background: #ffe7eb; }
+.calendar-grid .day-cell.selected:nth-child(7n) > span:first-child { color: #3475b5; background: #e7f1ff; }
+.calendar-grid .day-cell.today > span:first-child { min-width: 20px; padding: 2px; border-radius: 10px; outline: 2px solid #147c60; outline-offset: 1px; }
+.week-strip .week-day:first-child { color: #c9475b; }
+.week-strip .week-day:last-child { color: #3475b5; }
+.week-strip .week-day.selected:first-child { color: #c9475b; background: #ffe7eb; }
+.week-strip .week-day.selected:last-child { color: #3475b5; background: #e7f1ff; }
+.week-strip .week-day.today { outline: 2px solid #147c60; outline-offset: -2px; }
+.ledger-grid .ledger-day:nth-child(7n + 1) .ledger-date { color: #c9475b; }
+.ledger-grid .ledger-day:nth-child(7n) .ledger-date { color: #3475b5; }
+.ledger-grid .ledger-day.today .ledger-date { padding: 2px; border-radius: 5px; outline: 2px solid #147c60; outline-offset: 1px; }

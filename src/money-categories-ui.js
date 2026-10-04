@@ -1,5 +1,5 @@
-import { MONEY_CATEGORY_COLORS, MONEY_CATEGORY_ICONS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=20";
-import { icon } from "./icons.js?v=20";
+import { MONEY_CATEGORY_COLORS, MONEY_CATEGORY_ICONS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=21";
+import { icon } from "./icons.js?v=21";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 
