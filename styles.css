@@ -697,3 +697,63 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .ledger-grid .ledger-day:nth-child(7n + 1) .ledger-date { color: #c9475b; }
 .ledger-grid .ledger-day:nth-child(7n) .ledger-date { color: #3475b5; }
 .ledger-grid .ledger-day.today .ledger-date { padding: 2px; border-radius: 5px; outline: 2px solid #147c60; outline-offset: 1px; }
+
+/* Keep the four daily essentials in a two-column home widget board. */
+.home-screen .screen-header { padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: 10px; }
+.home-screen .screen-header .eyebrow { margin-top: 8px; font-size: 10px; }
+.home-screen .screen-header h1 { margin-top: 1px; font-size: 25px; }
+.home-screen .screen-content.home-widget-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 9px; padding: 10px 12px 22px; }
+.home-widget-grid .day-brief { grid-column: 1 / -1; min-height: 72px; border-radius: 15px; }
+.home-widget-grid .day-brief-date { width: 62px; padding: 6px; }
+.home-widget-grid .day-brief-date span { font-size: 9px; }
+.home-widget-grid .day-brief-date strong { font-size: 29px; }
+.home-widget-grid .day-brief-body { gap: 3px; padding: 7px 10px; }
+.home-widget-grid .day-brief-body > span { font-size: 9px; }
+.home-widget-grid .day-brief-body strong { font-size: 13px; }
+.home-widget-grid .day-brief-counts span { gap: 3px; padding: 3px 5px; font-size: 9px; }
+.home-widget-grid .day-brief-counts b { font-size: 10px; }
+.home-widget-grid .dashboard-card { display: flex; flex-direction: column; min-width: 0; height: 166px; padding: 0 9px 8px; border-radius: 15px; }
+.home-widget-grid .dashboard-card > .section-heading { flex: none; gap: 4px; min-height: 45px; margin: 0 -9px 3px; padding: 6px 8px; }
+.home-widget-grid .dashboard-heading { gap: 6px; }
+.home-widget-grid .dashboard-heading .section-symbol { width: 25px; height: 25px; border-radius: 8px; }
+.home-widget-grid .dashboard-heading .section-symbol svg { width: 16px; height: 16px; }
+.home-widget-grid .dashboard-card .section-kicker { display: none; }
+.home-widget-grid .dashboard-card .section-heading h2 { margin: 0; font-size: 12px; white-space: nowrap; }
+.home-widget-grid .dashboard-card .section-count { max-width: 48px; overflow: hidden; font-size: 9px; text-overflow: ellipsis; }
+.home-widget-grid .home-count-link { padding: 4px 0; border: 0; color: var(--section-accent); background: transparent; cursor: pointer; }
+.home-widget-grid .dashboard-card .section-heading .text-link { padding: 0; font-size: 0; }
+.home-widget-grid .dashboard-card .section-heading .text-link svg { width: 17px; height: 17px; }
+.home-widget-grid .dashboard-card .empty-inline { gap: 5px; min-height: 45px; font-size: 10px; line-height: 1.3; }
+.home-widget-grid .dashboard-card .empty-icon { width: 25px; height: 25px; border-radius: 7px; }
+.home-widget-grid .dashboard-card .empty-icon svg { width: 16px; height: 16px; }
+.home-widget-grid .dashboard-card .inline-add { min-height: 27px; margin-top: auto; padding: 0 3px; border-radius: 8px; font-size: 10px; }
+.home-widget-grid .dashboard-card .inline-add svg { width: 13px; height: 13px; }
+.home-widget-grid .home-agenda-row { grid-template-columns: 34px minmax(0, 1fr); gap: 4px; min-height: 34px; padding: 4px 0; }
+.home-widget-grid .home-agenda-time { font-size: 9px; }
+.home-widget-grid .home-agenda-main { gap: 0; padding-left: 5px; }
+.home-widget-grid .home-agenda-main strong { font-size: 10px; }
+.home-widget-grid .home-agenda-main small, .home-widget-grid .home-agenda-row > svg { display: none; }
+.home-widget-grid .home-agenda-more { margin: 0; padding: 0; font-size: 9px; }
+.home-widget-grid .todo-row { gap: 5px; min-height: 34px; }
+.home-widget-grid .todo-check { flex: none; width: 17px; height: 17px; }
+.home-widget-grid .todo-details { padding: 3px 0; }
+.home-widget-grid .todo-details strong { font-size: 10px; }
+.home-widget-grid .todo-details span, .home-widget-grid .overdue-tag { display: none; }
+.home-overdue-count { color: #ad5371; font-size: 9px; font-weight: 800; }
+.home-widget-grid .dashboard-work .event-row { gap: 6px; padding: 7px 0; }
+.home-widget-grid .dashboard-work .event-row > svg { display: none; }
+.home-widget-grid .dashboard-work .event-details strong { font-size: 11px; }
+.home-widget-grid .dashboard-work .event-details > span { display: -webkit-box; overflow: hidden; font-size: 9px; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.home-widget-grid .dashboard-money .money-summary { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 4px 0 0; }
+.home-widget-grid .dashboard-money .money-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 30px; padding: 4px 5px; }
+.home-widget-grid .dashboard-money .money-summary span { font-size: 9px; }
+.home-widget-grid .dashboard-money .money-summary b { font-size: 13px; }
+.home-widget-grid .dashboard-money .field-help { margin-top: 4px; font-size: 8px; line-height: 1.3; }
+.home-widget-grid .dashboard-life { grid-column: 1 / -1; height: auto; min-height: 126px; }
+.home-widget-grid .dashboard-life .life-home-summary { padding: 0; }
+.home-widget-grid .dashboard-life .life-home-summary strong { font-size: 20px; }
+@media (max-height: 700px) {
+  .home-widget-grid .day-brief { min-height: 62px; }
+  .home-widget-grid .dashboard-card:not(.dashboard-life) { height: 146px; }
+  .home-widget-grid .dashboard-card .inline-add { min-height: 24px; }
+}

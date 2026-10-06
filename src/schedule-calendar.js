@@ -1,7 +1,7 @@
-import { CATEGORIES, eventsForDay, todosForDay } from "./domain.js?v=23";
-import { holidayName } from "./jp-holidays.js?v=23";
-import { fixedCostsForDay } from "./money.js?v=23";
-import { shiftsForDay } from "./work.js?v=23";
+import { CATEGORIES, eventsForDay, todosForDay } from "./domain.js?v=24";
+import { holidayName } from "./jp-holidays.js?v=24";
+import { fixedCostsForDay } from "./money.js?v=24";
+import { shiftsForDay } from "./work.js?v=24";
 
 export function calendarItemsForDay({ events, todos, workShifts, workplaces, fixedCosts }, key) {
   const holiday = holidayName(key);
