@@ -110,9 +110,9 @@ svg { flex: none; }
   border-top: 1px solid #e7eeea; background: #fffffff4;
   backdrop-filter: blur(20px); box-shadow: 0 -5px 20px #1b433010;
 }
-.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 10px; color: #8f9b95; background: transparent; }
-.nav-item span { font-size: 9px; font-weight: 700; }
-.nav-item.active { color: #08ad70; background: #e9f8ef; }
+.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 10px; color: var(--tab-color, #657a70); background: transparent; }
+.nav-item span { font-size: 10px; font-weight: 700; }
+.nav-item.active { background: var(--tab-soft, #e7f3ed); }
 
 .segmented { display: grid; grid-template-columns: repeat(2, 1fr); padding: 3px; border-radius: 12px; background: #e9efeb; }
 .segmented button { min-height: 34px; border: 0; border-radius: 9px; color: #73867b; background: transparent; font-size: 12px; font-weight: 750; }
@@ -474,11 +474,11 @@ svg { flex: none; }
 .screen .day-cell.selected > span:first-child { background: var(--area, #137c65); }
 .screen .day-cell.today > span:first-child { color: var(--area, #137c65); }
 .screen .day-cell.selected.today > span:first-child { color: white; }
-.nav-item[data-tab="home"].active { color: #137c65; background: #e7f3ed; }
-.nav-item[data-tab="schedule"].active { color: #416fa9; background: #eaf1fa; }
-.nav-item[data-tab="money"].active { color: #087e78; background: #e3f2f0; }
-.nav-item[data-tab="work"].active { color: #b26538; background: #fcf0e5; }
-.nav-item[data-tab="life"].active { color: #79659d; background: #f1edf8; }
+.nav-item[data-tab="home"] { --tab-color: #137c65; --tab-soft: #e7f3ed; }
+.nav-item[data-tab="schedule"] { --tab-color: #416fa9; --tab-soft: #eaf1fa; }
+.nav-item[data-tab="money"] { --tab-color: #087e78; --tab-soft: #e3f2f0; }
+.nav-item[data-tab="work"] { --tab-color: #a4552e; --tab-soft: #fcf0e5; }
+.nav-item[data-tab="life"] { --tab-color: #79659d; --tab-soft: #f1edf8; }
 
 .home-screen .screen-content { gap: 13px; padding-top: 15px; }
 .day-brief { display: flex; align-items: stretch; overflow: hidden; min-height: 106px; border-radius: 17px; color: #fff; background: #213c38; box-shadow: 0 5px 15px #1d393019; }

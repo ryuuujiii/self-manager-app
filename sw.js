@@ -1,8 +1,8 @@
-const CACHE_NAME = "self-manager-v25";
+const CACHE_NAME = "self-manager-v26";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=24",
+  "./styles.css?v=25",
   "./src/app.js?v=24",
   "./src/schedule-calendar.js?v=24",
   "./src/db.js?v=24",
