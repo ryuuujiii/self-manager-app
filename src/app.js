@@ -1,16 +1,18 @@
-import { addDays, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=22";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=22";
-import { icon } from "./icons.js?v=22";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=22";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=22";
-import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=22";
-import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=22";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=22";
-import { payPeriodForDate } from "./pay-cycle.js?v=22";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=22";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=22";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=22";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=22";
+import { addDays, calendarDayLabel, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=23";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=23";
+import { icon } from "./icons.js?v=23";
+import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=23";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=23";
+import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=23";
+import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=23";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=23";
+import { payPeriodForDate } from "./pay-cycle.js?v=23";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=23";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=23";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=23";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=23";
+import { holidayName, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=23";
+import { calendarItemsForDay } from "./schedule-calendar.js?v=23";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -185,12 +187,14 @@ function renderTodoRow(todo, overdue=false) {
 
 function renderDayAgenda(key) {
   const events=eventsForDay(state.events,key),todos=todosForDay(state.todos,key),fixed=fixedCostsForDay(state.fixedCosts,key),shifts=shiftsForDay(state.workShifts,key);
-  return `<div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">AGENDA</span><h2>${escapeHTML(displayDate(key))}</h2></div><button class="small-today" data-action="today">今日</button></div>${events.length||todos.length||fixed.length||shifts.length?events.map(renderEventRow).join("")+shifts.map(renderShiftAgendaRow).join("")+todos.map((todo)=>renderTodoRow(todo)).join("")+fixed.map((item)=>`<button class="event-row" data-action="money-edit-fixed" data-id="${escapeHTML(item.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(item.title)} · ${yen(item.amount)}</strong><span>固定費 ${item.paid?"· 支払い済み":""}</span></span>${icon("chevron",16)}</button>`).join(""):`<div class="empty-inline"><p>この日の予定・ToDo・シフトはありません</p></div>`}</div>`;
+  const holiday=holidayName(key);
+  return `<div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">AGENDA</span><h2>${escapeHTML(displayDate(key))}</h2></div><button class="small-today" data-action="today">今日</button></div>${holiday?`<div class="agenda-holiday">${escapeHTML(holiday)}${Number(key.slice(0,4))>OFFICIAL_HOLIDAYS_THROUGH?"（暫定）":""}</div>`:""}${events.length||todos.length||fixed.length||shifts.length?events.map(renderEventRow).join("")+shifts.map(renderShiftAgendaRow).join("")+todos.map((todo)=>renderTodoRow(todo)).join("")+fixed.map((item)=>`<button class="event-row" data-action="money-edit-fixed" data-id="${escapeHTML(item.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(item.title)} · ${yen(item.amount)}</strong><span>固定費 ${item.paid?"· 支払い済み":""}</span></span>${icon("chevron",16)}</button>`).join(""):`<div class="empty-inline"><p>この日の予定・ToDo・シフトはありません</p></div>`}</div>`;
 }
 
 function renderCalendar() {
   const today=dateKey(),cells=monthGrid(state.year,state.month);
-  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${state.year}年${state.month+1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div><div class="calendar-grid">${cells.map((key)=>{const colors=eventsForDay(state.events,key).map((event)=>CATEGORIES[event.category]?.color||"#9b9eaa");colors.push(...shiftsForDay(state.workShifts,key).map(() => "#f28b54"));colors.push(...todosForDay(state.todos,key).map((todo)=>todo.completedAt?"#bfc8c4":"#e76995"));colors.push(...fixedCostsForDay(state.fixedCosts,key).map(() => "#f28b54"));return `<button class="day-cell ${Number(key.slice(5,7))===state.month+1?"":"outside"} ${key===today?"today":""} ${key===state.selectedDate?"selected":""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(displayDate(key))}"><span>${Number(key.slice(-2))}</span><span class="day-dots">${colors.slice(0,3).map((color)=>`<i style="background:${color}"></i>`).join("")}</span></button>`}).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+  const data={events:state.events,todos:state.todos,workShifts:state.workShifts,workplaces:state.workplaces,fixedCosts:state.fixedCosts};
+  return `<div class="calendar-panel schedule-calendar"><div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${state.year}年${state.month+1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div><div class="calendar-grid">${cells.map((key)=>{const items=calendarItemsForDay(data,key),visible=items.slice(0,3),remaining=items.length-visible.length;return `<button class="day-cell ${Number(key.slice(5,7))===state.month+1?"":"outside"} ${key===today?"today":""} ${key===state.selectedDate?"selected":""} ${key.endsWith("-01")?"month-start":""} ${items.some((item)=>item.kind==="holiday")?"holiday":""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(`${displayDate(key)}${items.length?` ${items.map((item)=>item.title).join("、")}`:""}`)}"><span class="schedule-day-number">${calendarDayLabel(key)}</span><span class="schedule-day-items">${visible.map((item)=>`<span class="schedule-day-chip ${item.kind}" style="--chip-color:${item.color}">${escapeHTML(item.title)}</span>`).join("")}${remaining?`<span class="schedule-day-more">ほか${remaining}件</span>`:""}</span></button>`}).join("")}</div>${state.year>OFFICIAL_HOLIDAYS_THROUGH?`<p class="schedule-holiday-note">${OFFICIAL_HOLIDAYS_THROUGH+1}年以降の祝日は、公式発表前の暫定表示です。</p>`:""}${renderDayAgenda(state.selectedDate)}</div>`;
 }
 
 function weekStart(key) {

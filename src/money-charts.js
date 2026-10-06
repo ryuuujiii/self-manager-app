@@ -1,4 +1,4 @@
-import { moneyCategoryById } from "./money-categories.js?v=22";
+import { moneyCategoryById } from "./money-categories.js?v=23";
 
 const formatYen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);

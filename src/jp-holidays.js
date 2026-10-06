@@ -1,4 +1,4 @@
-import { addDays, dateKey } from "./domain.js?v=22";
+import { addDays, dateKey } from "./domain.js?v=23";
 
 // 内閣府「国民の祝日」CSV（1955〜2027年、取得日 2026-09-27）
 // https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv
@@ -41,6 +41,44 @@ export function holidayInfo(key) {
   const year = Number(key.slice(0, 4));
   if (year >= 1955 && year <= OFFICIAL_HOLIDAYS_THROUGH) return { holiday: officialDates.has(key), confirmed: true };
   return { holiday: provisionalHolidays(year).has(key), confirmed: false };
+}
+
+const exceptionalNames = {
+  "2019-05-01": "天皇の即位の日",
+  "2019-10-22": "即位礼正殿の儀",
+  "2020-07-23": "海の日",
+  "2020-07-24": "スポーツの日",
+  "2020-08-10": "山の日",
+  "2021-07-22": "海の日",
+  "2021-07-23": "スポーツの日",
+  "2021-08-08": "山の日"
+};
+
+export function holidayName(key) {
+  if (!holidayInfo(key).holiday) return null;
+  if (exceptionalNames[key]) return exceptionalNames[key];
+  const [year, month, day] = key.split("-").map(Number);
+  if (year < 2007) return "祝日";
+  const fixed = {
+    "01-01": "元日", "02-11": "建国記念の日", "02-23": "天皇誕生日",
+    "04-29": "昭和の日", "05-03": "憲法記念日", "05-04": "みどりの日",
+    "05-05": "こどもの日", "08-11": "山の日", "11-03": "文化の日",
+    "11-23": "勤労感謝の日"
+  };
+  const monthDay = key.slice(5);
+  if (fixed[monthDay] && !(year < 2020 && monthDay === "02-23")) return fixed[monthDay];
+  if (year < 2019 && monthDay === "12-23") return "天皇誕生日";
+  if (key === nthMonday(year, 1, 2)) return "成人の日";
+  if (key === nthMonday(year, 7, 3) && year !== 2020 && year !== 2021) return "海の日";
+  if (key === nthMonday(year, 9, 3)) return "敬老の日";
+  if (key === nthMonday(year, 10, 2) && year !== 2020 && year !== 2021) return year < 2020 ? "体育の日" : "スポーツの日";
+  const spring = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+  const autumn = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+  if (month === 3 && day === spring) return "春分の日";
+  if (month === 9 && day === autumn) return "秋分の日";
+  if (holidayInfo(addDays(key, -1)).holiday && holidayInfo(addDays(key, 1)).holiday) return "国民の休日";
+  if (holidayInfo(addDays(key, -1)).holiday) return "振替休日";
+  return "祝日";
 }
 
 export function isBusinessDay(key) {

@@ -676,6 +676,19 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .calendar-grid .day-cell.selected:nth-child(7n + 1) > span:first-child { color: #c9475b; background: #ffe7eb; }
 .calendar-grid .day-cell.selected:nth-child(7n) > span:first-child { color: #3475b5; background: #e7f1ff; }
 .calendar-grid .day-cell.today > span:first-child { min-width: 20px; padding: 2px; border-radius: 10px; outline: 2px solid #147c60; outline-offset: 1px; }
+.schedule-calendar .day-cell { justify-items: stretch; gap: 5px; min-width: 0; min-height: 106px; padding: 6px 2px 5px; text-align: left; }
+.schedule-calendar .schedule-day-number { justify-self: center; min-height: 18px; font-size: 12px; font-weight: 850; line-height: 18px; }
+.schedule-calendar .day-cell.month-start .schedule-day-number { font-size: 10px; }
+.schedule-calendar .day-cell.selected .schedule-day-number { min-height: 23px; line-height: 23px; text-align: center; }
+.schedule-calendar .schedule-day-items { display: grid; align-content: start; gap: 3px; min-width: 0; width: 100%; }
+.schedule-calendar .schedule-day-chip { display: -webkit-box; overflow: hidden; min-width: 0; padding: 2px 2px; border-left: 2px solid var(--chip-color); border-radius: 3px; color: var(--chip-color); background: color-mix(in srgb, var(--chip-color) 13%, white); font-size: 8px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.schedule-calendar .schedule-day-chip.todo-done { text-decoration: line-through; }
+.schedule-calendar .schedule-day-more { color: #62766b; font-size: 8px; font-weight: 800; line-height: 1.2; text-align: center; }
+.schedule-calendar .day-cell.outside .schedule-day-items { opacity: .5; }
+.schedule-calendar .day-cell.holiday > .schedule-day-number, .schedule-calendar .day-cell.selected.holiday > .schedule-day-number { color: #c9475b; }
+.schedule-calendar .day-cell.selected.holiday > .schedule-day-number { background: #ffe7eb; }
+.schedule-holiday-note { margin: 8px 5px 0; color: #82968a; font-size: 10px; line-height: 1.5; }
+.agenda-holiday { margin: 8px 0; padding: 9px 11px; border-left: 3px solid #c9475b; border-radius: 7px; color: #ac3e52; background: #fff0f2; font-size: 12px; font-weight: 800; }
 .week-strip .week-day:first-child { color: #c9475b; }
 .week-strip .week-day:last-child { color: #3475b5; }
 .week-strip .week-day.selected:first-child { color: #c9475b; background: #ffe7eb; }
