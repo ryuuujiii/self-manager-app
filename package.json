@@ -1,0 +1,12 @@
+{
+  "name": "self-manager",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "prepare:pages": "node scripts/prepare-pages.js",
+    "dev": "node scripts/dev-server.js",
+    "test": "node --test"
+  }
+}
