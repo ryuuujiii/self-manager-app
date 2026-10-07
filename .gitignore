@@ -1,0 +1,30 @@
+/dist/
+/publish/
+/node_modules/
+
+# Local reference images and screenshots; app icons in assets/ remain tracked.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.heic
+/mocks/
+/previews/
+/screenshots/
+
+# Local data, credentials, and machine-generated files.
+/backups/
+/exports/
+/*backup*.json
+*.backup.json
+*.log
+.env
+.env.*
+!.env.example
+*.tmp
+*.temp
+*.bak
+*.sqlite
+*.db
+.DS_Store
+Thumbs.db
