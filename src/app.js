@@ -1,18 +1,20 @@
-import { addDays, calendarDayLabel, CATEGORIES, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=24";
-import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=24";
-import { icon } from "./icons.js?v=24";
-import { cashBalance, fixedCostDueDate, fixedCostReminders, fixedCostsForDay, fixedCostSummary, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=24";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=24";
-import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=24";
-import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=24";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=24";
-import { payPeriodForDate } from "./pay-cycle.js?v=24";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=24";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=24";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateShoppingItem, validateWishlistItem } from "./life.js?v=24";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=24";
-import { holidayName, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=24";
-import { calendarItemsForDay } from "./schedule-calendar.js?v=24";
+import { createDraftController } from "./form-drafts.js?v=27";
+import { eventCategoryCatalog, eventCategoryById, validateEventCategory } from "./event-categories.js?v=27";
+import { addDays, calendarDayLabel, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=27";
+import { deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=27";
+import { icon } from "./icons.js?v=27";
+import { fixedCostDueDate, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=27";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=27";
+import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=27";
+import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=27";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=27";
+import { payPeriodForDate } from "./pay-cycle.js?v=27";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=27";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=27";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateMemoFolder, validateShoppingItem, validateWishlistItem } from "./life.js?v=27";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=27";
+import { holidayName, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=27";
+import { calendarItemsForDay } from "./schedule-calendar.js?v=27";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -32,6 +34,11 @@ const state = {
   transactions: [],
   fixedCosts: [],
   moneyCategories: [],
+  eventCategories: [],
+  memoFolders: [],
+  eventCategoryEditor: null,
+  activeMemoFolderId: null,
+  habitMonth: dateKey().slice(0, 7),
   workplaces: [],
   workShifts: [],
   habits: [],
@@ -90,8 +97,53 @@ function toast(message, isError = false) {
   toastElement.timer = setTimeout(() => toastElement.classList.remove("visible"), 3500);
 }
 
+let draftWarningShown = false;
+const drafts = createDraftController({ getItem: (key) => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value), removeItem: (key) => localStorage.removeItem(key) }, () => {
+  if (!draftWarningShown) { toast("下書きを端末に保存できません。保存領域を確認してください。", true); draftWarningShown = true; }
+});
+function saveDrafts() {
+  const form = root.querySelector("#money-form.money-entry-form");
+  if (form && state.moneyEditor?.kind === "transaction") state.moneyEditor.draft = Object.fromEntries(new FormData(form));
+  drafts.capture(state, root);
+  drafts.persist(state);
+}
+function syncMoneyDraft(form) {
+  const type = form.querySelector('input[name="type"]:checked')?.value || "expense";
+  form.querySelector(".money-entry-amount-label").textContent = type === "income" ? "＋ 収入" : "− 支出";
+  form.querySelector(".money-entry-amount-card").dataset.type = type;
+  form.querySelector(".money-entry-submit").textContent = form.dataset.id ? "変更を保存" : type === "income" ? "収入を入力する" : "支出を入力する";
+  form.querySelectorAll('[data-action="money-add-category"]').forEach((button) => button.dataset.kind = type);
+}
+function renderEventCategories() {
+  const categories = eventCategoryCatalog(state.eventCategories, state.events).filter((item) => !item.deleted);
+  return `<div class="screen">${header({ title: "予定のカテゴリ", back: true })}<main class="screen-content"><section class="content-card"><p class="field-help">名前と色を変更できます。削除しても既存の予定と色は残ります。</p>${categories.map((item) => `<button class="settings-action" data-action="event-category-edit" data-id="${escapeHTML(item.id)}"><span class="category-dot" style="background:${item.color}"></span><span>${escapeHTML(item.label)}</span>${icon("chevron", 16)}</button>`).join("")}<button class="inline-add" data-action="event-category-edit">${icon("plus", 17)} カテゴリを追加</button></section></main></div>`;
+}
+function renderEventCategoryEditor() {
+  if (!state.eventCategoryEditor) return "";
+  const id = state.eventCategoryEditor.id;
+  const item = id ? eventCategoryById(id, state.eventCategories, state.events) : null;
+  return `<div class="modal-backdrop"><section class="editor-sheet" role="dialog" aria-modal="true" aria-labelledby="event-category-title"><div class="editor-heading"><button class="text-link" data-action="event-category-close">キャンセル</button><h2 id="event-category-title">カテゴリ${id ? "を編集" : "を追加"}</h2></div><form id="event-category-form" data-kind="category" data-id="${escapeHTML(id || "")}"><label class="field"><span>名前</span><input name="label" maxlength="24" required value="${escapeHTML(item?.label || "")}" /></label><label class="field"><span>色</span><input type="color" name="color" value="${item?.color || "#8054c9"}" /></label><p id="event-category-error" class="form-error" role="alert"></p><button type="submit" class="primary-button">保存する</button>${id ? `<button type="button" class="delete-button" data-action="event-category-delete" data-id="${escapeHTML(id)}">削除する</button>` : ""}</form></section></div>`;
+}
+async function saveEventCategory(form) {
+  const fields = new FormData(form);
+  const record = { id: form.dataset.id || `custom-${crypto.randomUUID()}`, label: String(fields.get("label") || "").trim(), color: String(fields.get("color") || ""), deleted: false };
+  const error = validateEventCategory(record);
+  if (error) { form.querySelector("#event-category-error").textContent = error; return; }
+  await putRecord(state.db, "eventCategories", record);
+  state.eventCategoryEditor = null;
+  await refresh();
+  toast("カテゴリを保存しました。");
+}
+async function deleteEventCategory(id) {
+  if (!confirm("このカテゴリを削除しますか？既存の予定はそのまま残ります。")) return;
+  const item = eventCategoryById(id, state.eventCategories, state.events);
+  await putRecord(state.db, "eventCategories", { ...item, id, deleted: true });
+  state.eventCategoryEditor = null;
+  await refresh();
+}
+
 async function refresh() {
-  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.moneyCategories, state.workplaces, state.workShifts, state.habits, state.habitRecords, state.checklists, state.shoppingItems, state.wishlistItems, state.memos] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "moneyCategories", "workplaces", "workShifts", "habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos"].map((store) => getAll(state.db, store)));
+  [state.events, state.todos, state.wallets, state.transactions, state.fixedCosts, state.moneyCategories, state.workplaces, state.workShifts, state.habits, state.habitRecords, state.checklists, state.shoppingItems, state.wishlistItems, state.memos, state.eventCategories, state.memoFolders] = await Promise.all(["events", "todos", "wallets", "transactions", "fixedCosts", "moneyCategories", "workplaces", "workShifts", "habits", "habitRecords", "checklists", "shoppingItems", "wishlistItems", "memos", "eventCategories", "memoFolders"].map((store) => getAll(state.db, store)));
   if (!state.moneyMonthInitialized) { state.moneyMonth = payPeriodForDate(dateKey(), state.wallets.find((item) => item.id === "cash")); state.moneyMonthInitialized = true; }
   if (!state.workplaces.some((item) => item.id === state.workWorkplaceId)) state.workWorkplaceId = state.workplaces[0]?.id || null;
   if (!state.workMonthInitialized) { state.workMonth = workPeriodForDate(dateKey(), state.workplaces.find((item) => item.id === state.workWorkplaceId)); state.workMonthInitialized = true; }
@@ -101,7 +153,7 @@ async function refresh() {
 function currentMoneyCategories() { return resolveMoneyCategories(state.moneyCategories, state.transactions, state.fixedCosts); }
 function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, categories: currentMoneyCategories(), mode: state.moneyMode, trendMode: state.moneyTrendMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
 function workData() { return { workplaces: state.workplaces, shifts: state.workShifts, workplaceId: state.workWorkplaceId, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
-function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, moneyCategories: currentMoneyCategories(), mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
+function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, moneyCategories: currentMoneyCategories(), memoFolders: state.memoFolders, activeMemoFolderId: state.activeMemoFolderId, habitMonth: state.habitMonth, mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
   return `<header class="screen-header">
@@ -118,6 +170,7 @@ function header({ eyebrow, title, actions = "", back = false }) {
 
 function renderHome() {
   const today = dateKey();
+  const money = monthSummary(state.transactions, today.slice(0, 7));
   const summary = homeSummary(state.events, state.todos, today);
   const todayShifts = shiftsForDay(state.workShifts, today);
   const agenda = [
@@ -153,7 +206,7 @@ function renderHome() {
         <button class="inline-add" data-action="add-todo">${icon("plus", 17)} ToDoを追加</button>
       </section>
       <section class="content-card dashboard-card dashboard-work"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("work", 19)}</span><div><span class="section-kicker">この先</span><h2>次の仕事</h2></div></div><button class="text-link" data-action="goto-work">シフトを見る ${icon("chevron", 14)}</button></div>${upcomingShift ? renderShiftAgendaRow(upcomingShift) : `<div class="empty-inline"><p>次のシフトはありません</p></div>`}</section>
-      <section class="content-card dashboard-card dashboard-money"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("money", 19)}</span><div><span class="section-kicker">お金</span><h2>現金の財布</h2></div></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary"><div><span>財布の現金</span><b>${yen(cashBalance(moneyData().wallet, state.transactions))}</b></div><div><span>今月の現金支出</span><b class="expense">${yen(monthSummary(state.transactions.filter((item) => item.paymentMethod === "cash"), today.slice(0, 7)).expense)}</b></div></div><p class="field-help">固定費・サブスクは財布とは別に管理します。</p></section>
+      <section class="content-card dashboard-card dashboard-money"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("money", 19)}</span><div><span class="section-kicker">お金</span><h2>今月のお金</h2></div></div><button class="text-link" data-action="goto-money">詳しく見る ${icon("chevron", 14)}</button></div><div class="money-summary home-money-summary"><div><span>今月の収支</span><b class="${money.net < 0 ? "expense" : "income"}">${money.net < 0 ? "−" : "+"}${yen(Math.abs(money.net))}</b></div><div><span>今月の支出</span><b>${yen(money.expense)}</b></div></div><p class="field-help">現金・現金以外を含む今月の記録。収支は収入−支出です。</p></section>
       <section class="content-card dashboard-card dashboard-life"><div class="section-heading"><div class="dashboard-heading"><span class="section-symbol">${icon("life", 19)}</span><div><span class="section-kicker">生活</span><h2>今日の習慣</h2></div></div><button class="text-link" data-action="goto-life">生活を見る ${icon("chevron", 14)}</button></div><div class="life-home-summary"><strong>${doneHabits}/${dueHabits.length}</strong><span>今日の習慣を達成</span></div>${dueHabits.length ? dueHabits.slice(0, 3).map((habit) => `<div class="life-home-item">${habitProgress(habit, state.habitRecords, today).todayDone ? "✓" : "○"} ${escapeHTML(habit.title)}</div>`).join("") : '<p class="life-note">習慣を登録すると、ここでも確認できます。</p>'}</section>
     </main>
   </div>`;
@@ -164,12 +217,12 @@ function renderHomeAgendaRow({ kind, item }) {
     const workplace = state.workplaces.find((place) => place.id === item.workplaceId);
     return `<button class="home-agenda-row work" data-action="work-edit-shift" data-id="${escapeHTML(item.id)}"><span class="home-agenda-time">${escapeHTML(item.start)}</span><span class="home-agenda-main"><strong>${escapeHTML(workplace?.name || "仕事")}</strong><small>仕事 · ${escapeHTML(item.end)}まで</small></span>${icon("chevron", 15)}</button>`;
   }
-  const category = CATEGORIES[item.category] || CATEGORIES.other;
+  const category = eventCategoryById(item.category, state.eventCategories, state.events);
   return `<button class="home-agenda-row event" data-action="edit-event" data-id="${escapeHTML(item.id)}" data-date="${escapeHTML(item.occurrenceDate || item.date)}"><span class="home-agenda-time">${item.allDay ? "終日" : escapeHTML(item.start)}</span><span class="home-agenda-main"><strong>${escapeHTML(item.title)}</strong><small>予定 · ${escapeHTML(category.label)}${item.allDay ? "" : ` · ${escapeHTML(item.end)}まで`}</small></span>${icon("chevron", 15)}</button>`;
 }
 
 function renderEventRow(event) {
-  const category = CATEGORIES[event.category] || CATEGORIES.other;
+  const category = eventCategoryById(event.category, state.eventCategories, state.events);
   return `<button class="event-row" data-action="edit-event" data-id="${escapeHTML(event.id)}" data-date="${escapeHTML(event.occurrenceDate || event.date)}">
     <span class="event-stripe" style="--stripe:${category.color}"></span>
     <span class="event-details"><strong>${escapeHTML(event.title)}</strong><span>${escapeHTML(clockRange(event))} <span class="middot">·</span> ${escapeHTML(category.label)}</span></span>
@@ -184,20 +237,19 @@ function renderShiftAgendaRow(shift) {
 }
 
 function renderTodoRow(todo, overdue=false) {
-  const category=CATEGORIES[todo.category]||CATEGORIES.other;
   const due=todo.occurrenceDate||todo.dueDate||"";
-  return `<div class="todo-row ${todo.completedAt?"done":""}"><button class="todo-check ${todo.completedAt?"checked":""}" data-action="toggle-todo" data-id="${escapeHTML(todo.id)}" data-date="${escapeHTML(due)}" aria-label="${todo.completedAt?"未完了に戻す":"完了にする"}: ${escapeHTML(todo.title)}">${todo.completedAt?icon("check",15):""}</button><button class="todo-details" data-action="edit-todo" data-id="${escapeHTML(todo.id)}"><strong>${escapeHTML(todo.title)}</strong><span>${overdue?`期限 ${escapeHTML(displayDate(due))} · `:todo.dueTime?`${escapeHTML(todo.dueTime)} · `:""}${escapeHTML(category.label)}${todo.repeatRule&&todo.repeatRule!=="none"?" · 繰り返し":""}</span></button>${overdue?`<span class="overdue-tag">期限超過</span>`:""}</div>`;
+  return `<div class="todo-row ${todo.completedAt?"done":""}"><button class="todo-check ${todo.completedAt?"checked":""}" data-action="toggle-todo" data-id="${escapeHTML(todo.id)}" data-date="${escapeHTML(due)}" aria-label="${todo.completedAt?"未完了に戻す":"完了にする"}: ${escapeHTML(todo.title)}">${todo.completedAt?icon("check",15):""}</button><button class="todo-details" data-action="edit-todo" data-id="${escapeHTML(todo.id)}"><strong>${escapeHTML(todo.title)}</strong><span>${overdue?`期限 ${escapeHTML(displayDate(due))} · `:todo.dueTime?`${escapeHTML(todo.dueTime)} · `:""}${todo.repeatRule&&todo.repeatRule!=="none"?" · 繰り返し":""}</span></button>${overdue?`<span class="overdue-tag">期限超過</span>`:""}</div>`;
 }
 
 function renderDayAgenda(key) {
-  const events=eventsForDay(state.events,key),todos=todosForDay(state.todos,key),fixed=fixedCostsForDay(state.fixedCosts,key),shifts=shiftsForDay(state.workShifts,key);
+  const events=eventsForDay(state.events,key),todos=todosForDay(state.todos,key),fixed=[],shifts=shiftsForDay(state.workShifts,key);
   const holiday=holidayName(key);
   return `<div class="day-agenda"><div class="section-heading"><div><span class="section-kicker green">AGENDA</span><h2>${escapeHTML(displayDate(key))}</h2></div><button class="small-today" data-action="today">今日</button></div>${holiday?`<div class="agenda-holiday">${escapeHTML(holiday)}${Number(key.slice(0,4))>OFFICIAL_HOLIDAYS_THROUGH?"（暫定）":""}</div>`:""}${events.length||todos.length||fixed.length||shifts.length?events.map(renderEventRow).join("")+shifts.map(renderShiftAgendaRow).join("")+todos.map((todo)=>renderTodoRow(todo)).join("")+fixed.map((item)=>`<button class="event-row" data-action="money-edit-fixed" data-id="${escapeHTML(item.id)}"><span class="event-stripe" style="--stripe:#f28b54"></span><span class="event-details"><strong>${escapeHTML(item.title)} · ${yen(item.amount)}</strong><span>固定費 ${item.paid?"· 支払い済み":""}</span></span>${icon("chevron",16)}</button>`).join(""):`<div class="empty-inline"><p>この日の予定・ToDo・シフトはありません</p></div>`}</div>`;
 }
 
 function renderCalendar() {
   const today=dateKey(),cells=monthGrid(state.year,state.month);
-  const data={events:state.events,todos:state.todos,workShifts:state.workShifts,workplaces:state.workplaces,fixedCosts:state.fixedCosts};
+  const data={events:state.events,todos:state.todos,workShifts:state.workShifts,workplaces:state.workplaces,fixedCosts:[], eventCategories:state.eventCategories};
   return `<div class="calendar-panel schedule-calendar"><div class="month-control"><button class="icon-button" data-action="previous-month" aria-label="前月">${icon("arrowLeft",20)}</button><h2>${state.year}年${state.month+1}月</h2><button class="icon-button" data-action="next-month" aria-label="翌月">${icon("chevron",20)}</button></div><div class="weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div><div class="calendar-grid">${cells.map((key)=>{const items=calendarItemsForDay(data,key),visible=items.slice(0,3),remaining=items.length-visible.length;return `<button class="day-cell ${Number(key.slice(5,7))===state.month+1?"":"outside"} ${key===today?"today":""} ${key===state.selectedDate?"selected":""} ${key.endsWith("-01")?"month-start":""} ${items.some((item)=>item.kind==="holiday")?"holiday":""}" data-action="select-day" data-date="${key}" aria-label="${escapeHTML(`${displayDate(key)}${items.length?` ${items.map((item)=>item.title).join("、")}`:""}`)}"><span class="schedule-day-number">${calendarDayLabel(key)}</span><span class="schedule-day-items">${visible.map((item)=>`<span class="schedule-day-chip ${item.kind}" style="--chip-color:${item.color}">${escapeHTML(item.title)}</span>`).join("")}${remaining?`<span class="schedule-day-more">ほか${remaining}件</span>`:""}</span></button>`}).join("")}</div>${state.year>OFFICIAL_HOLIDAYS_THROUGH?`<p class="schedule-holiday-note">${OFFICIAL_HOLIDAYS_THROUGH+1}年以降の祝日は、公式発表前の暫定表示です。</p>`:""}${renderDayAgenda(state.selectedDate)}</div>`;
 }
 
@@ -208,7 +260,7 @@ function weekStart(key) {
 
 function renderWeek() {
   const first=weekStart(state.selectedDate),days=Array.from({length:7},(_,i)=>addDays(first,i));
-  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""} ${key===dateKey()?"today":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length+fixedCostsForDay(state.fixedCosts,key).length+shiftsForDay(state.workShifts,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
+  return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前週">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(first))} 〜 ${escapeHTML(displayDate(days[6]))}</h2><button class="icon-button" data-action="next-period" aria-label="翌週">${icon("chevron",20)}</button></div><div class="week-strip">${days.map((key)=>`<button class="week-day ${key===state.selectedDate?"selected":""} ${key===dateKey()?"today":""}" data-action="select-day" data-date="${key}"><span>${escapeHTML(weekdayLabel(key))}</span><strong>${Number(key.slice(-2))}</strong><small>${eventsForDay(state.events,key).length+todosForDay(state.todos,key).length+shiftsForDay(state.workShifts,key).length||""}</small></button>`).join("")}</div>${renderDayAgenda(state.selectedDate)}</div>`;
 }
 
 function renderDay() {
@@ -217,7 +269,7 @@ function renderDay() {
 
 function renderEventList() {
   const days=Array.from({length:30},(_,i)=>addDays(state.selectedDate,i));
-  const active=days.filter((key)=>eventsForDay(state.events,key).length||todosForDay(state.todos,key).length||fixedCostsForDay(state.fixedCosts,key).length||shiftsForDay(state.workShifts,key).length);
+  const active=days.filter((key)=>eventsForDay(state.events,key).length||todosForDay(state.todos,key).length||shiftsForDay(state.workShifts,key).length);
   return `<div class="calendar-panel"><div class="month-control"><button class="icon-button" data-action="previous-period" aria-label="前の30日">${icon("arrowLeft",20)}</button><h2>${escapeHTML(displayDate(state.selectedDate))}から30日</h2><button class="icon-button" data-action="next-period" aria-label="次の30日">${icon("chevron",20)}</button></div>${active.length?active.map(renderDayAgenda).join(""):`<div class="empty-large"><strong>この期間の予定はありません</strong></div>`}</div>`;
 }
 
@@ -246,7 +298,7 @@ function renderSchedule() {
 }
 
 function renderReminders() {
-  const now=new Date(),items=[...remindersForWindow(state.events,state.todos,now),...fixedCostReminders(state.fixedCosts,now)].sort((a,b)=>a.triggerAt-b.triggerAt);
+  const now=new Date(),items=remindersForWindow(state.events,state.todos,now).sort((a,b)=>a.triggerAt-b.triggerAt);
   const due=items.filter((item)=>item.triggerAt<=now),upcoming=items.filter((item)=>item.triggerAt>now);
   const row=(item)=>`<button class="reminder-row" data-action="${item.kind==="fixedCost"?"money-edit-fixed":`edit-${item.kind}`}" data-id="${escapeHTML(item.id)}" data-date="${escapeHTML(item.occurrenceDate)}"><span class="reminder-icon">${icon(item.kind==="event"?"calendar":item.kind==="fixedCost"?"money":"check",18)}</span><span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(displayDate(item.occurrenceDate))} ${item.scheduledAt.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})} · ${item.kind==="event"?"予定":item.kind==="fixedCost"?"固定費":"ToDo"}</small></span><em class="${item.triggerAt<=now?"due":""}">${item.triggerAt<=now?"確認":"予定"}</em></button>`;
   return `<div class="screen reminders-screen">${header({title:"リマインダー",back:true})}<main class="screen-content"><div class="privacy-note">${icon("bell",18)}<p>アプリを開いているときに確認できます。指定時刻のバックグラウンド通知はまだ利用できません。</p></div><section class="content-card"><div class="section-heading"><h2>確認する項目</h2><span class="section-count">${due.length}件</span></div>${due.length?due.map(row).join(""):`<div class="empty-inline"><p>確認する項目はありません</p></div>`}</section><section class="content-card"><div class="section-heading"><h2>これから7日間</h2><span class="section-count">${upcoming.length}件</span></div>${upcoming.length?upcoming.map(row).join(""):`<div class="empty-inline"><p>予定されているリマインダーはありません</p></div>`}</section></main></div>`;
@@ -268,7 +320,7 @@ function renderSettings() {
 }
 
 function categoryOptions(selected) {
-  return Object.entries(CATEGORIES).map(([value, category]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${escapeHTML(category.label)}</option>`).join("");
+  return eventCategoryCatalog(state.eventCategories, state.events).filter((item) => !item.deleted || item.id === selected).map((category) => { const value = category.id; return `<option value="${value}" ${selected === value ? "selected" : ""}>${escapeHTML(category.label)}${category.deleted ? "（削除済み）" : ""}</option>`; }).join("");
 }
 
 function renderEditor() {
@@ -292,7 +344,7 @@ function renderEditor() {
       <label class="field"><span>繰り返し終了日 <small>任意</small></span><input name="repeatUntil" type="date" value="${escapeHTML(item?.repeatUntil || "")}" /></label>
       <label class="field"><span>リマインダー</span><select name="reminderLead"><option value="none" ${!item?.reminderLead || item.reminderLead === "none" ? "selected" : ""}>なし</option><option value="at" ${item?.reminderLead === "at" ? "selected" : ""}>時刻になったら</option><option value="oneHour" ${item?.reminderLead === "oneHour" ? "selected" : ""}>1時間前</option><option value="oneDay" ${item?.reminderLead === "oneDay" ? "selected" : ""}>1日前</option></select></label>
       <p class="field-help">アプリ内で確認できます。終日・時刻なしは9:00が基準です。</p>
-      <label class="field"><span>カテゴリ</span><select name="category">${categoryOptions(item?.category || (isEvent ? "private" : "life"))}</select></label>
+      ${isEvent ? `<label class="field"><span>カテゴリ</span><select name="category">${categoryOptions(item?.category || eventCategoryCatalog(state.eventCategories).find((item) => !item.deleted)?.id || "")}</select></label><button class="text-link" type="button" data-action="event-categories">カテゴリを管理</button>` : ""}
       <label class="field"><span>メモ <small>任意</small></span><textarea name="note" rows="3" maxlength="2000" placeholder="補足があれば記入">${escapeHTML(item?.note || "")}</textarea></label>
       <p class="form-error" id="form-error" role="alert"></p>
       <button class="primary-button save-button" type="submit">${id ? "変更を保存" : "登録する"}</button>
@@ -307,8 +359,17 @@ function renderNav() {
 
 function render() {
   if (!state.db) return;
-  const screen = state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : state.tab === "work" ? renderWorkScreen(workData()) : renderLifeScreen(lifeData());
-  root.innerHTML = `${screen}${renderNav()}${renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderMoneyCategoryEditor(state.moneyCategoryEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}${renderLifeEditor(state.lifeEditor, lifeData())}`;
+  const previousMoneyForm = root.querySelector("#money-form.money-entry-form");
+  if (previousMoneyForm && state.moneyEditor?.kind === "transaction" && (previousMoneyForm.dataset.id || "") === (state.moneyEditor.id || "")) state.moneyEditor.draft = Object.fromEntries(new FormData(previousMoneyForm));
+  drafts.capture(state, root);
+  const screen = state.page === "event-categories" ? renderEventCategories() : state.page === "settings" ? renderSettings() : state.page === "reminders" ? renderReminders() : state.tab === "home" ? renderHome() : state.tab === "schedule" ? renderSchedule() : state.tab === "money" ? renderMoneyScreen(moneyData()) : state.tab === "work" ? renderWorkScreen(workData()) : renderLifeScreen(lifeData());
+  root.innerHTML = `${screen}${renderNav()}${state.page === "event-categories" ? "" : renderEditor()}${renderMoneyEditor(state.moneyEditor, moneyData())}${renderMoneyCategoryEditor(state.moneyCategoryEditor, moneyData())}${renderWorkEditor(state.workEditor, workData())}${renderLifeEditor(state.lifeEditor, lifeData())}${renderEventCategoryEditor()}`;
+  drafts.restore(state, root);
+  const moneyForm = root.querySelector("#money-form");
+  if (moneyForm?.classList.contains("money-entry-form")) { syncMoneyDraft(moneyForm); updateMoneyEntryButton(moneyForm); }
+  const categoryForm = root.querySelector("#money-category-form");
+  if (categoryForm) updateMoneyCategoryButton(categoryForm);
+  drafts.persist(state);
   document.title = `${state.page === "settings" ? "設定" : state.page === "reminders" ? "リマインダー" : TABS.find((tab) => tab.id === state.tab)?.label} | 自分管理`;
 }
 
@@ -353,11 +414,11 @@ async function saveForm(form) {
   const repeatRule = String(fields.get("repeatRule") || "none");
   const anchor = String(fields.get("date") || "");
   const sameSeries = existing && existing.repeatRule === repeatRule && (existing.date || existing.dueDate) === anchor;
-  const common = { repeatRule, repeatUntil: String(fields.get("repeatUntil") || ""), reminderLead: String(fields.get("reminderLead") || "none"), id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: String(fields.get("category") || "other"), note: String(fields.get("note") || "").trim(), sourceMemoId: existing?.sourceMemoId || state.editor?.draft?.sourceMemoId || null, createdAt: existing?.createdAt || now, updatedAt: now };
+  const common = { repeatRule, repeatUntil: String(fields.get("repeatUntil") || ""), reminderLead: String(fields.get("reminderLead") || "none"), id: existing?.id || crypto.randomUUID(), title: String(fields.get("title") || "").trim(), category: kind === "event" ? String(fields.get("category") || "") : (existing?.category || "other"), note: String(fields.get("note") || "").trim(), sourceMemoId: existing?.sourceMemoId || state.editor?.draft?.sourceMemoId || null, createdAt: existing?.createdAt || now, updatedAt: now };
   const record = kind === "event"
     ? { ...common, date: String(fields.get("date") || ""), allDay: fields.has("allDay"), start: fields.has("allDay") ? "" : String(fields.get("start") || ""), end: fields.has("allDay") ? "" : String(fields.get("end") || ""), excludedDates: sameSeries && repeatRule !== "none" ? (existing.excludedDates || []).filter((date) => !common.repeatUntil || date <= common.repeatUntil) : [] }
     : { ...common, dueDate: String(fields.get("date") || ""), dueTime: String(fields.get("dueTime") || ""), completedAt: repeatRule === "none" ? (existing?.completedAt || null) : null, completedDates: sameSeries ? (existing?.completedDates || []) : [] };
-  const error = kind === "event" ? validateEvent(record) : validateTodo(record);
+  const error = kind === "event" ? validateEvent(record, state.eventCategories) : validateTodo(record);
   if (error) {
     form.querySelector("#form-error").textContent = error;
     return;
@@ -499,9 +560,8 @@ async function saveMoneyForm(form){
     record={...common,type:String(fields.get("type")||""),amount:Number(fields.get("amount")),date:String(fields.get("date")||""),category:String(fields.get("category")||""),paymentMethod:String(fields.get("paymentMethod")||""),note:String(fields.get("note")||"").trim()};
     store="transactions";error=validateTransaction(record,state.moneyCategories);
   }else if(kind==="fixed"){
-    const cadence=String(fields.get("cadence")||""),paymentDay=Number(fields.get("paymentDay")),startDate=String(fields.get("startDate")||"");
-    const sameSchedule=existing?.cadence===cadence&&existing?.paymentDay===paymentDay&&existing?.startDate===startDate;
-    record={...common,title:String(fields.get("title")||"").trim(),amount:Number(fields.get("amount")),category:String(fields.get("category")||""),cadence,paymentDay,startDate,endDate:String(fields.get("endDate")||""),reminderLead:String(fields.get("reminderLead")||"none"),note:String(fields.get("note")||"").trim(),paidDates:sameSchedule?(existing?.paidDates||[]):[]};
+    const cadence = String(fields.get("cadence") || "");
+    record = { ...existing, ...common, title: String(fields.get("title") || "").trim(), amount: Number(fields.get("amount")), category: String(fields.get("category") || ""), cadence, renewalDate: String(fields.get("renewalDate") || ""), startDate: existing?.startDate || dateKey(), endDate: existing?.endDate || "", reminderLead: "none", note: String(fields.get("note") || "").trim(), paidDates: existing?.paidDates || [] };
     store="fixedCosts";error=validateFixedCost(record,state.moneyCategories);
   }else return;
   if(error){form.querySelector("#money-form-error").textContent=error;return}
@@ -580,10 +640,10 @@ async function deleteWorkItem(kind, id) {
   toast("削除しました。");
 }
 
-const LIFE_COLLECTIONS = { habit: ["habits", "habits"], checklist: ["checklists", "checklists"], shopping: ["shoppingItems", "shoppingItems"], wishlist: ["wishlistItems", "wishlistItems"], memo: ["memos", "memos"] };
+const LIFE_COLLECTIONS = { habit: ["habits", "habits"], checklist: ["checklists", "checklists"], shopping: ["shoppingItems", "shoppingItems"], wishlist: ["wishlistItems", "wishlistItems"], memo: ["memos", "memos"], folder: ["memoFolders", "memoFolders"] };
 
 function openLifeEditor(kind, id = null) {
-  state.lifeEditor = { kind, id };
+  state.lifeEditor = { kind, id, folderId: state.activeMemoFolderId };
   render();
 }
 
@@ -634,8 +694,12 @@ async function saveLifeForm(form) {
     error = validateWishlistItem(record);
   } else if (kind === "memo") {
     const body = String(fields.get("body") || "").trim();
-    record = { ...common, title: String(fields.get("title") || "").trim() || body.split(/\r?\n/).find(Boolean)?.slice(0, 120) || "", body, category: String(fields.get("category") || "") };
+    record = { ...existing, ...common, title: String(fields.get("title") || "").trim() || body.split(/\r?\n/).find(Boolean)?.slice(0, 120) || "新規メモ", body, folderId: String(fields.get("folderId") || "") || null };
     error = validateMemo(record);
+    if (record.folderId && !state.memoFolders.some((folder) => folder.id === record.folderId)) error = "フォルダが見つかりません。";
+  } else if (kind === "folder") {
+    record = { ...common, title: String(fields.get("title") || "").trim() };
+    error = validateMemoFolder(record);
   }
   if (error) { errorNode.textContent = error; return; }
   state.busy = true;
@@ -685,6 +749,7 @@ async function deleteLifeItem(kind, id) {
   const [store] = LIFE_COLLECTIONS[kind] || [];
   if (!store) return;
   const wish = kind === "wishlist" ? state.wishlistItems.find((item) => item.id === id) : null;
+  if (kind === "folder" && state.memos.some((memo) => memo.folderId === id)) { toast("メモを別のフォルダへ移してから削除してください。", true); return; }
   const note = wish?.purchaseTransactionId ? "家計簿の記録は残ります。" : "";
   if (!window.confirm(`この記録を削除しますか？${note}`)) return;
   if (kind === "habit") await deleteHabit(state.db, id, state.habitRecords);
@@ -700,7 +765,7 @@ function convertMemo(id, kind) {
   if (!memo || !["todo", "event"].includes(kind)) return;
   state.lifeEditor = null;
   state.selectedDate = dateKey();
-  state.editor = { kind, id: null, draft: { title: memo.title, note: memo.body, category: "life", allDay: true, sourceMemoId: memo.id } };
+  state.editor = { kind, id: null, draft: { title: memo.title, note: memo.body, category: eventCategoryCatalog(state.eventCategories).find((item) => !item.deleted)?.id || "", allDay: true, sourceMemoId: memo.id } };
   render();
 }
 
@@ -737,6 +802,10 @@ root.addEventListener("click", async (event) => {
   if ((action === "close-editor" || action === "money-close-editor" || action === "money-close-category" || action === "work-close-editor" || action === "life-close-editor") && event.target !== button && button.classList.contains("modal-backdrop")) return;
   try {
     if (action === "tab") { const selected=button.dataset.tab; if(state.tab===selected&&!state.page){if(selected==="schedule")state.scheduleMode="calendar";else if(selected==="money")state.moneyMode="overview";else if(selected==="work")state.workMode="month";else if(selected==="life")state.lifeMode="today";} state.tab = selected; state.page = null; state.editor = null; state.moneyEditor = null; state.moneyCategoryEditor = null; state.workEditor = null; state.lifeEditor = null; render(); window.scrollTo(0, 0); }
+    else if (action === "event-categories") { state.page = "event-categories"; render(); }
+    else if (action === "event-category-edit") { state.eventCategoryEditor = { kind: "category", id: button.dataset.id || null }; render(); }
+    else if (action === "event-category-close") { state.eventCategoryEditor = null; render(); }
+    else if (action === "event-category-delete") await deleteEventCategory(button.dataset.id);
     else if (action === "settings") { state.page = "settings"; render(); }
     else if (action === "reminders") { state.page = "reminders"; render(); }
     else if (action === "close-page") { state.page = null; render(); }
@@ -785,7 +854,9 @@ root.addEventListener("click", async (event) => {
     else if (action === "work-edit-shift") openWorkEditor("shift", button.dataset.id);
     else if (action === "work-close-editor") { state.workEditor = null; render(); }
     else if (action === "work-delete") await deleteWorkItem(button.dataset.kind, button.dataset.id);
+    else if (action === "life-prev-month" || action === "life-next-month") { const [year, month] = state.habitMonth.split("-").map(Number); state.habitMonth = dateKey(new Date(year, month - 1 + (action === "life-next-month" ? 1 : -1), 1)).slice(0,7); render(); }
     else if (action === "life-mode") { state.lifeMode = button.dataset.mode; render(); }
+    else if (action === "life-open-folder") { state.activeMemoFolderId = button.dataset.id || null; state.lifeMode = "memos"; render(); }
     else if (action === "life-open-checklist") { state.activeChecklistId = button.dataset.id || null; state.lifeMode = "checklists"; render(); }
     else if (action === "life-add") openLifeEditor(button.dataset.kind);
     else if (action === "life-edit") openLifeEditor(button.dataset.kind, button.dataset.id);
@@ -810,13 +881,15 @@ root.addEventListener("click", async (event) => {
     else if (action === "delete-record") await deleteItem(button.dataset.kind, button.dataset.id);
     else if (action === "export") await downloadBackup();
     else if (action === "import") root.querySelector("#backup-file")?.click();
+    saveDrafts();
   } catch (cause) {
     toast(cause?.message || "操作を完了できませんでした。", true);
   }
 });
 
 root.addEventListener("submit", (event) => {
-  if (event.target.id === "editor-form") { event.preventDefault(); saveForm(event.target); }
+  if (event.target.id === "event-category-form") { event.preventDefault(); saveEventCategory(event.target).catch((cause) => toast(cause.message, true)); }
+  else if (event.target.id === "editor-form") { event.preventDefault(); saveForm(event.target); }
   else if (event.target.id === "money-form") { event.preventDefault(); saveMoneyForm(event.target); }
   else if (event.target.id === "money-category-form") { event.preventDefault(); saveMoneyCategoryForm(event.target); }
   else if (event.target.id === "work-form") { event.preventDefault(); saveWorkForm(event.target); }
@@ -824,6 +897,7 @@ root.addEventListener("submit", (event) => {
 });
 
 root.addEventListener("change", async (event) => {
+  saveDrafts();
   if (event.target.name === "type" && event.target.closest("#money-form")) {
     const form=event.target.form;
     const kind=event.target.value;
@@ -836,6 +910,7 @@ root.addEventListener("change", async (event) => {
     form.querySelector(".money-entry-submit").textContent=form.dataset.id?"変更を保存":kind==="income"?"収入を入力する":"支出を入力する";
     form.querySelectorAll('[data-action="money-add-category"]').forEach((button)=>button.dataset.kind=kind);
     updateMoneyEntryButton(form);
+    saveDrafts();
     return;
   }
   if(event.target.closest("#money-form")?.classList.contains("money-entry-form")){updateMoneyEntryButton(event.target.form);return;}
@@ -848,12 +923,14 @@ root.addEventListener("change", async (event) => {
 });
 
 root.addEventListener("input", (event) => {
+  saveDrafts();
   if(event.target.closest("#money-form")?.classList.contains("money-entry-form"))updateMoneyEntryButton(event.target.form);
   if(event.target.closest("#money-category-form"))updateMoneyCategoryButton(event.target.form);
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.editor) closeEditor();
+  else if (event.key === "Escape" && state.eventCategoryEditor) { state.eventCategoryEditor = null; render(); }
   else if (event.key === "Escape" && state.moneyCategoryEditor) { state.moneyCategoryEditor = null; render(); }
   else if (event.key === "Escape" && state.moneyEditor) closeMoneyEditor();
   else if (event.key === "Escape" && state.workEditor) { state.workEditor = null; render(); }
@@ -864,12 +941,15 @@ window.addEventListener("pageshow", () => {
   if (state.db) refresh().catch((cause) => toast(cause.message, true));
 });
 
+window.addEventListener("pagehide", saveDrafts);
 document.addEventListener("visibilitychange", () => {
+  if (document.hidden) saveDrafts();
   if (!document.hidden && state.db) refresh().catch((cause) => toast(cause.message, true));
 });
 
 async function start() {
   try {
+    drafts.load(state);
     state.db = await openDatabase();
     await refresh();
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

@@ -1,7 +1,7 @@
-import { dateKey } from "./domain.js?v=24";
-import { MONEY_CATEGORY_COLORS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=24";
-import { categoryBadge } from "./money-categories-ui.js?v=24";
-import { icon } from "./icons.js?v=24";
+import { dateKey } from "./domain.js?v=27";
+import { MONEY_CATEGORY_COLORS, moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=27";
+import { categoryBadge } from "./money-categories-ui.js?v=27";
+import { icon } from "./icons.js?v=27";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 

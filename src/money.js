@@ -1,6 +1,6 @@
-import { addDays, dateKey, isValidDateKey } from "./domain.js?v=24";
-import { moneyCategoryExists } from "./money-categories.js?v=24";
-export { MONEY_CATEGORIES } from "./money-categories.js?v=24";
+import { addDays, dateKey, isValidDateKey } from "./domain.js?v=27";
+import { moneyCategoryExists } from "./money-categories.js?v=27";
+export { MONEY_CATEGORIES } from "./money-categories.js?v=27";
 export function validateWallet(value){
   if(value.id!=="cash"||!Number.isSafeInteger(value.openingBalance)||value.openingBalance<0||value.openingBalance>1e10)return "初期残高は0円以上の整数で入力してください。";
   if(value.salaryDay!=null&&(!Number.isInteger(value.salaryDay)||value.salaryDay<1||value.salaryDay>31))return "給料日は1〜31日で指定してください。";
@@ -34,7 +34,8 @@ export function validateFixedCost(value,categories=[]){
   if(!Number.isSafeInteger(value.amount)||value.amount<1||value.amount>1e10)return "金額は1円以上の整数で入力してください。";
   if(!moneyCategoryExists(value.category,categories))return "カテゴリを選択してください。";
   if(!["monthly","yearly"].includes(value.cadence))return "支払い周期を選択してください。";
-  if(!Number.isInteger(value.paymentDay)||value.paymentDay<1||value.paymentDay>31)return "支払日は1〜31日で指定してください。";
+  if(Object.hasOwn(value,"renewalDate")) { if(value.renewalDate && !isValidDateKey(value.renewalDate)) return "更新日を確認してください。"; }
+  else if(!Number.isInteger(value.paymentDay)||value.paymentDay<1||value.paymentDay>31)return "支払日は1〜31日で指定してください。";
   if(!isValidDateKey(value.startDate))return "正しい開始日を指定してください。";
   if(value.endDate&&(!isValidDateKey(value.endDate)||value.endDate<value.startDate))return "終了日を確認してください。";
   if(value.paidDates&&(!Array.isArray(value.paidDates)||value.paidDates.some((date)=>!isValidDateKey(date))))return "支払い履歴が不正です。";
@@ -82,4 +83,35 @@ export function fixedCostReminders(records,now=new Date()){
     }
   }
   return result.sort((a,b)=>a.triggerAt-b.triggerAt);
+}
+
+export function initialRenewalDate(record) {
+  if (Object.hasOwn(record, "renewalDate")) return record.renewalDate || "";
+  if (!record.startDate || !record.paymentDay) return "";
+  const [year, month] = record.startDate.split("-").map(Number);
+  let date = fixedCostDueDate(record, record.startDate.slice(0,7));
+  if (!date) date = fixedCostDueDate(record, dateKey(new Date(year + (record.cadence === "yearly" ? 1 : 0), month - 1 + (record.cadence === "monthly" ? 1 : 0), 1)).slice(0,7));
+  return date || "";
+}
+export function nextRenewalDate(record, today = dateKey()) {
+  const anchor = initialRenewalDate(record);
+  if (!anchor || !isValidDateKey(anchor)) return "";
+  if (anchor >= today) return record.endDate && anchor > record.endDate ? "" : anchor;
+  const [year, month, day] = anchor.split("-").map(Number);
+  const [currentYear, currentMonth] = today.split("-").map(Number);
+  let step = record.cadence === "yearly" ? Math.max(0, currentYear - year) : Math.max(0, (currentYear - year) * 12 + currentMonth - month);
+  const at = (offset) => {
+    const base = new Date(year + (record.cadence === "yearly" ? offset : 0), month - 1 + (record.cadence === "monthly" ? offset : 0), 1);
+    base.setDate(Math.min(day, new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate()));
+    return dateKey(base);
+  };
+  if (at(step) < today) step++;
+  const result = at(step);
+  return record.endDate && result > record.endDate ? "" : result;
+}
+export function subscriptionSummary(records, today = dateKey()) {
+  const active = records.filter((item) => item.startDate <= today && (!item.endDate || item.endDate >= today));
+  const monthly = active.filter((item) => item.cadence === "monthly").reduce((sum,item) => sum + item.amount, 0);
+  const yearly = active.filter((item) => item.cadence === "yearly").reduce((sum,item) => sum + item.amount, 0);
+  return { active, monthly, yearly, monthlyEquivalent: Math.round(monthly + yearly / 12), annualTotal: monthly * 12 + yearly };
 }
