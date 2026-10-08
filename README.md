@@ -41,7 +41,7 @@ npm run dev
 
 公開用ファイルは `npm run build` で `dist/` に生成します。テストやビルドスクリプト、UIモックは `dist/` に入りません。`dist/` は生成物なのでGit管理しません。
 
-GitHub Pagesへの移行中は、既存の公開元と公開URLを維持します。`.github/workflows/pages.yml` はPRでテストとビルドだけを行い、Pagesへの公開は `main` 上での `workflow_dispatch` による手動実行だけです。移行ブランチをpushしたりPRを作ったりしても公開されません。Pagesの公開元をGitHub Actionsへ切り替える前に、手動公開を実行しないでください。
+公開URLは維持します。`.github/workflows/pages.yml` はPRでテストとビルドだけを行い、`main` へのpush（PRのmergeを含む）後にGitHub Pagesへ公開します。`main` 上での `workflow_dispatch` による手動公開も可能です。作業ブランチのpushやPR作成だけでは公開されません。今後の改善を修正・検証後に公開する運用はユーザーの許可に基づきます。
 
 `npm run prepare:pages` は従来の `publish/` リポジトリを使う手順として残しています。GitHub Actions公開を実機で確認した後は日常運用から外します。公開URLを維持するため、リポジトリ名を変更しません。端末内で入力した予定やToDoはリポジトリへ送信されません。
 

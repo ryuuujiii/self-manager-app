@@ -1,3 +1,4 @@
+import { eventCategoryExists } from "./event-categories.js?v=27";
 export const CATEGORIES = {
   university: { label: "大学", color: "#7164db" },
   work: { label: "仕事", color: "#f28b54" },
@@ -56,12 +57,12 @@ function validateOptions(value, anchor) {
   if (value.repeatUntil && (!isValidDateKey(value.repeatUntil) || value.repeatUntil < anchor)) return "繰り返しの終了日を確認してください。";
   return null;
 }
-export function validateEvent(value) {
+export function validateEvent(value, categories = []) {
   if (!value.title?.trim()) return "予定のタイトルを入力してください。";
   if (!isValidDateKey(value.date)) return "正しい日付を指定してください。";
   if (!value.allDay && (!isValidTime(value.start) || !isValidTime(value.end))) return "開始・終了時刻を指定してください。";
   if (!value.allDay && value.end <= value.start) return "終了時刻は開始時刻より後にしてください。";
-  if (!CATEGORIES[value.category]) return "カテゴリを選択してください。";
+  if (!eventCategoryExists(value.category, categories)) return "カテゴリを選択してください。";
   if (value.excludedDates && (!Array.isArray(value.excludedDates) || value.excludedDates.some((date) => !isValidDateKey(date) || date < value.date) || new Set(value.excludedDates).size !== value.excludedDates.length)) return "繰り返し予定の除外日が不正です。";
   return validateOptions(value, value.date);
 }
@@ -71,7 +72,6 @@ export function validateTodo(value) {
   if (value.dueDate && !isValidDateKey(value.dueDate)) return "正しい期限日を指定してください。";
   if (value.dueTime && !value.dueDate) return "時刻を指定する場合は期限日も指定してください。";
   if (value.dueTime && !isValidTime(value.dueTime)) return "正しい期限時刻を指定してください。";
-  if (!CATEGORIES[value.category]) return "カテゴリを選択してください。";
   if (value.reminderLead && value.reminderLead !== "none" && !value.dueDate) return "リマインダーには期限日を指定してください。";
   if (value.completedDates && (!Array.isArray(value.completedDates) || value.completedDates.some((date) => !isValidDateKey(date)))) return "完了履歴が不正です。";
   return validateOptions(value, value.dueDate);

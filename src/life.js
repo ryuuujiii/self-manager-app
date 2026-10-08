@@ -1,4 +1,4 @@
-import { addDays, dateKey, isValidDateKey } from "./domain.js?v=24";
+import { addDays, dateKey, isValidDateKey } from "./domain.js?v=27";
 
 export const CHECKLIST_CATEGORIES = { university: "大学", work: "バイト", outside: "外出", travel: "旅行", other: "その他" };
 export const WISHLIST_CATEGORIES = { daily: "日用品", fashion: "ファッション", digital: "デジタル", hobby: "趣味", other: "その他" };
@@ -87,6 +87,22 @@ export function wishlistTotal(items) {
 
 export function validateMemo(value) {
   if (!value?.id || !validText(value.title, 120)) return "メモの見出しを入力してください。";
-  if (!optionalText(value.body, 10000) || !MEMO_CATEGORIES[value.category]) return "メモの内容とカテゴリを確認してください。";
+  if (!optionalText(value.body, 10000)) return "メモの内容を確認してください。";
+  if (value.folderId != null && typeof value.folderId !== "string") return "フォルダを確認してください。";
   return null;
+}
+
+export function validateMemoFolder(value) {
+  if (!value || typeof value.id !== "string" || !value.id || !validText(value.title, 120)) return "フォルダ名を入力してください。";
+  return null;
+}
+
+export function habitMonthProgress(habit, records, month, today = dateKey()) {
+  const [year, number] = month.split("-").map(Number);
+  const completed = new Set(records.filter((item) => item.habitId === habit.id).map((item) => item.date));
+  const days = Array.from({ length: new Date(year, number, 0).getDate() }, (_, index) => {
+    const date = `${month}-${String(index + 1).padStart(2, "0")}`;
+    return { date, due: habitDueOn(habit, date), done: completed.has(date), future: date > today };
+  });
+  return { days, done: days.filter((day) => day.done && !day.future).length, due: days.filter((day) => day.due && !day.future).length, total: records.filter((item) => item.habitId === habit.id && item.date <= today).length };
 }
