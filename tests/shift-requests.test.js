@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { requestId, validateShiftRequest, requestConflicts, requestConversion } from "../src/shift-requests.js";
+import { requestId, validateShiftRequest, requestConflicts, requestConversion, buildShiftRequests, validateRequestBatch } from "../src/shift-requests.js";
 import { workPeriod } from "../src/work.js";
 import { validateBackup } from "../src/db.js";
 
@@ -48,4 +48,26 @@ test("新しい希望をバックアップへ含め、旧v6の読み込みを維
   assert.equal(validateBackup(latest),latest);
   assert.throws(() => validateBackup({...latest,shiftRequests:[request,request]}),/重複/);
   assert.throws(() => validateBackup({...latest,workplaces:[]}),/希望/);
+});
+
+test("一括入力は選択日ごとのIDを作り、重複日を除き作成日時を保持する", () => {
+  const dates = ["2026-11-02", request.date, request.date];
+  const records = buildShiftRequests({...request,note:"共通メモ"},dates,[{...request,createdAt:"old"}],"now");
+  assert.deepEqual(records.map((item) => item.date),[request.date,"2026-11-02"]);
+  assert.equal(records[0].createdAt,"old");
+  assert.equal(records[1].createdAt,"now");
+  assert.equal(records[1].id,requestId("cafe","2026-11-02"));
+  assert.ok(records.every((item) => item.note === "共通メモ" && item.breakMinutes === 30));
+  assert.equal(validateRequestBatch(records,workplaces,workPeriod("2026-10",workplaces[0])),null);
+  const off = buildShiftRequests({...request,status:"off",start:"",end:"",breakMinutes:0},dates);
+  assert.equal(validateRequestBatch(off,workplaces),null);
+});
+test("一括入力は不正な日・期間外・重複・別勤務先を全体で拒否する", () => {
+  const period = workPeriod("2026-10",workplaces[0]);
+  assert.match(validateRequestBatch([],workplaces,period),/日付/);
+  assert.match(validateRequestBatch([request,{...request,id:requestId("cafe","2026-11-31"),date:"2026-11-31"}],workplaces,period),/不正/);
+  assert.match(validateRequestBatch(buildShiftRequests(request,[request.date,"2026-11-21"]),workplaces,period),/期間/);
+  assert.match(validateRequestBatch([request,request],workplaces,period),/不正/);
+  const other = {...workplaces[0],id:"other"};
+  assert.match(validateRequestBatch([request,{...request,workplaceId:"other",id:requestId("other",request.date)}],[...workplaces,other],period),/不正/);
 });

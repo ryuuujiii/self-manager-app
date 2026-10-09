@@ -1,10 +1,10 @@
-import { requestConversion, validateShiftRequest } from "./shift-requests.js?v=28";
-import { validateEventCategory } from "./event-categories.js?v=28";
-import { validateEvent, validateTodo } from "./domain.js?v=28";
-import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=28";
-import { validateWorkplace, validateWorkShift } from "./work.js?v=28";
-import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateMemoFolder, validateShoppingItem, validateWishlistItem } from "./life.js?v=28";
-import { validateMoneyCategory } from "./money-categories.js?v=28";
+import { requestConversion, validateShiftRequest, validateRequestBatch } from "./shift-requests.js?v=29";
+import { validateEventCategory } from "./event-categories.js?v=29";
+import { validateEvent, validateTodo } from "./domain.js?v=29";
+import { validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=29";
+import { validateWorkplace, validateWorkShift } from "./work.js?v=29";
+import { validateChecklist, validateHabit, validateHabitRecord, validateMemo, validateMemoFolder, validateShoppingItem, validateWishlistItem } from "./life.js?v=29";
+import { validateMoneyCategory } from "./money-categories.js?v=29";
 
 const DB_NAME = "self-manager";
 const DB_VERSION = 7;
@@ -161,4 +161,21 @@ export async function confirmShiftRequests(db, workplaceId, start, end) {
   }
   await done;
   return result;
+}
+
+// Validate and write all selected days together. Failed saves leave every day unchanged.
+export async function saveShiftRequestBatch(db, records, { overwrite = false, period } = {}) {
+  const tx = db.transaction(["shiftRequests", "workplaces"], "readwrite");
+  const done = transactionDone(tx);
+  const [existing, workplaces] = await Promise.all(["shiftRequests", "workplaces"].map((store) => requestResult(tx.objectStore(store).getAll())));
+  const error = validateRequestBatch(records, workplaces, period);
+  if (error) { tx.abort(); await done.catch(() => {}); throw new Error(error); }
+  const replacements = records.filter((record) => existing.some((item) => item.id === record.id));
+  if (replacements.length && !overwrite) { await done; return { replacements, saved: false }; }
+  for (const record of records) {
+    const previous = existing.find((item) => item.id === record.id);
+    tx.objectStore("shiftRequests").put({ ...record, createdAt: previous?.createdAt || record.createdAt });
+  }
+  await done;
+  return { replacements, saved: true };
 }

@@ -1,11 +1,11 @@
-import { cashBalance, monthSummary, subscriptionSummary, initialRenewalDate, nextRenewalDate } from "./money.js?v=28";
-import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=28";
-import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=28";
-import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=28";
-import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=28";
-import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=28";
-import { icon } from "./icons.js?v=28";
-import { renderExpenseDonut, renderMoneyTrend } from "./money-charts.js?v=28";
+import { cashBalance, monthSummary, subscriptionSummary, initialRenewalDate, nextRenewalDate } from "./money.js?v=29";
+import { addDays, calendarDayLabel, dateKey, formatDay } from "./domain.js?v=29";
+import { payPeriod, payPeriodForDate, periodGrid, periodSummary } from "./pay-cycle.js?v=29";
+import { moneyCategoryById, moneyCategoryCatalog } from "./money-categories.js?v=29";
+import { categoryBadge, renderMoneyCategories } from "./money-categories-ui.js?v=29";
+import { renderMoneyTransactionEditor } from "./money-entry-ui.js?v=29";
+import { icon } from "./icons.js?v=29";
+import { renderExpenseDonut, renderMoneyTrend } from "./money-charts.js?v=29";
 export function escapeMoney(value){return String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));}
 
 export function yen(amount){return `${new Intl.NumberFormat("ja-JP").format(amount)}円`;}

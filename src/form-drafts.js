@@ -4,7 +4,7 @@ export const EDITOR_FORMS = {
   editor: "editor-form", moneyEditor: "money-form", moneyCategoryEditor: "money-category-form",
   workEditor: "work-form", lifeEditor: "life-form", eventCategoryEditor: "event-category-form"
 };
-const CONTEXT_KEYS = ["tab", "page", "lifeMode", "activeChecklistId", "activeMemoFolderId", "habitMonth", "moneyMode", "moneyMonthInitialized", "workMonthInitialized", "moneyMonth", "moneySelectedDate", "workMode", "requestMonth", "requestSelectedDate", "workMonth", "workSelectedDate", "workWorkplaceId", "scheduleMode", "selectedDate", "year", "month"];
+const CONTEXT_KEYS = ["tab", "page", "lifeMode", "activeChecklistId", "activeMemoFolderId", "habitMonth", "moneyMode", "moneyMonthInitialized", "workMonthInitialized", "moneyMonth", "moneySelectedDate", "workMode", "requestMonth", "requestSelectedDate", "requestMultiSelect", "requestSelectedDates", "workMonth", "workSelectedDate", "workWorkplaceId", "scheduleMode", "selectedDate", "year", "month"];
 
 export function captureFields(form) {
   return Array.from(form.elements).filter((field) => field.name && !["file", "submit", "button", "password"].includes(field.type)).map((field) => ({
