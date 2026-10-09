@@ -1,7 +1,8 @@
-import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=27";
-import { icon } from "./icons.js?v=27";
-import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=27";
-import { periodGrid } from "./pay-cycle.js?v=27";
+import { renderShiftRequests, renderRequestEditor } from "./shift-requests-ui.js?v=28";
+import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=28";
+import { icon } from "./icons.js?v=28";
+import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=28";
+import { periodGrid } from "./pay-cycle.js?v=28";
 
 const yen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -37,10 +38,10 @@ function workplaceList(data) {
 export function renderWorkScreen(data) {
   const workplace = data.workplaces.find((item) => item.id === data.workplaceId) || data.workplaces[0];
   const summary = workPeriodSummary(data.shifts, workplace, data.month);
-  const modes = [["month", "月"], ["list", "リスト"], ["workplaces", "勤務先"]];
+  const modes = [["month", "月"], ["list", "リスト"], ["requests", "希望"], ["workplaces", "勤務先"]];
   const filter = data.workplaces.length > 1 ? `<label class="field work-filter"><span>勤務先</span><select id="workplace-filter">${data.workplaces.map((item) => `<option value="${escape(item.id)}" ${item.id === workplace?.id ? "selected" : ""}>${escape(item.name)}</option>`).join("")}</select></label>` : "";
   const paydayLabel = summary.payday ? `${shortDate(summary.payday.actual)}の給料見込み${summary.payday.actual !== summary.payday.nominal ? `（元の予定 ${shortDate(summary.payday.nominal)}）` : ""}` : "給料日未設定の見込み";
-  const body = data.mode === "workplaces" || !workplace ? workplaceList(data) : `${filter}<div class="today-anchor"><span><b>今日</b> ${escape(formatDay(dateKey(), { month: "long", day: "numeric", weekday: "short" }))}</span><button data-action="work-today">今日を表示</button></div><section class="work-summary-card"><span>${paydayLabel}</span><strong>${yen(summary.pay)}</strong>${summary.transportPay ? `<div class="work-pay-breakdown"><span>時給分 ${yen(summary.wagePay)}</span><span>交通費 ${yen(summary.transportPay)}（${summary.count}日）</span></div>` : ""}<div><span>勤務 ${summary.count}日</span><span>勤務時間 ${hours(summary.minutes)}</span></div><small>${shortDate(summary.start)}〜${shortDate(summary.end)}のシフトから計算した目安です。実際の給与や手取りとは異なります。</small></section><div class="work-actions"><button class="primary-button" data-action="work-add-shift">${icon("plus", 17)} シフトを追加</button><button class="secondary-button" data-action="work-add-workplace">勤務先を追加</button></div>${data.mode === "month" ? calendar(data, workplace, summary) : shiftList(data, workplace, summary)}`;
+  const body = data.mode === "workplaces" || !workplace ? workplaceList(data) : data.mode === "requests" ? renderShiftRequests(data, workplace, filter) : `${filter}<div class="today-anchor"><span><b>今日</b> ${escape(formatDay(dateKey(), { month: "long", day: "numeric", weekday: "short" }))}</span><button data-action="work-today">今日を表示</button></div><section class="work-summary-card"><span>${paydayLabel}</span><strong>${yen(summary.pay)}</strong>${summary.transportPay ? `<div class="work-pay-breakdown"><span>時給分 ${yen(summary.wagePay)}</span><span>交通費 ${yen(summary.transportPay)}（${summary.count}日）</span></div>` : ""}<div><span>勤務 ${summary.count}日</span><span>勤務時間 ${hours(summary.minutes)}</span></div><small>${shortDate(summary.start)}〜${shortDate(summary.end)}のシフトから計算した目安です。実際の給与や手取りとは異なります。</small></section><div class="work-actions"><button class="primary-button" data-action="work-add-shift">${icon("plus", 17)} シフトを追加</button><button class="secondary-button" data-action="work-add-workplace">勤務先を追加</button></div>${data.mode === "month" ? calendar(data, workplace, summary) : shiftList(data, workplace, summary)}`;
   return `<div class="screen work-screen"><header class="screen-header"><div class="header-top"><span class="brand-mark" aria-hidden="true">${icon("work", 18)}</span><span class="brand-title">自分管理</span><span class="header-spacer"></span></div><p class="eyebrow">シフト・勤務時間・給料見込み</p><h1>仕事</h1></header><main class="screen-content"><div class="segmented work-modes" role="tablist" aria-label="仕事の表示">${modes.map(([key, label]) => `<button role="tab" class="${data.mode === key ? "active" : ""}" aria-selected="${data.mode === key}" data-action="work-mode" data-mode="${key}">${label}</button>`).join("")}</div>${body}</main></div>`;
 }
 
@@ -52,6 +53,7 @@ function patternChoices(data) {
 
 export function renderWorkEditor(editor, data) {
   if (!editor) return "";
+  if (editor.kind === "request") return renderRequestEditor(editor, data);
   const isWorkplace = editor.kind === "workplace";
   const item = editor.id ? (isWorkplace ? data.workplaces : data.shifts).find((record) => record.id === editor.id) : null;
   const title = isWorkplace ? (item ? "勤務先を編集" : "勤務先を追加") : (item ? "シフトを編集" : "シフトを追加");

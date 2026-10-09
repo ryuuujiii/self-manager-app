@@ -1,6 +1,6 @@
-import { addDays, dateKey, isValidDateKey } from "./domain.js?v=27";
-import { moneyCategoryExists } from "./money-categories.js?v=27";
-export { MONEY_CATEGORIES } from "./money-categories.js?v=27";
+import { addDays, dateKey, isValidDateKey } from "./domain.js?v=28";
+import { moneyCategoryExists } from "./money-categories.js?v=28";
+export { MONEY_CATEGORIES } from "./money-categories.js?v=28";
 export function validateWallet(value){
   if(value.id!=="cash"||!Number.isSafeInteger(value.openingBalance)||value.openingBalance<0||value.openingBalance>1e10)return "初期残高は0円以上の整数で入力してください。";
   if(value.salaryDay!=null&&(!Number.isInteger(value.salaryDay)||value.salaryDay<1||value.salaryDay>31))return "給料日は1〜31日で指定してください。";
