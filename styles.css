@@ -160,7 +160,7 @@ svg { flex: none; }
 .future-item { display: flex; align-items: center; gap: 11px; min-height: 45px; border-top: 1px solid #f0f4f1; font-size: 12px; font-weight: 650; }
 .future-item span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 8px; color: #11ad75; background: #e9f8ef; }
 
-.work-modes { grid-template-columns: repeat(3, 1fr); }
+.work-modes { grid-template-columns: repeat(4, 1fr); }
 .work-summary-card { display: grid; gap: 8px; padding: 20px; border-radius: 20px; color: white; background: linear-gradient(125deg, #13b87a, #088e6b); box-shadow: 0 9px 20px #0ba66d28; }
 .work-summary-card > span { font-size: 12px; font-weight: 750; }
 .work-summary-card strong { font-size: 32px; line-height: 1.1; letter-spacing: -.04em; }
@@ -786,3 +786,33 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .subscription-cost { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin: 18px 0; font-size: 14px; }
 .subscription-bar { grid-column: 1 / -1; background: #edf3ef; height: 8px; border-radius: 6px; overflow: hidden; }
 .subscription-bar i { display: block; height: 100%; background: #52a77c; border-radius: 6px; }
+
+/* Shift requests share the work period but remain separate from confirmed shifts. */
+.request-calendar .month-control h2 { font-size: 15px; text-align: center; line-height: 1.5; }
+.request-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; font-size: 12px; color: #685b3e; }
+.request-counts span { padding: 6px 9px; border-radius: 8px; background: #fff6df; }
+.request-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 3px; }
+.request-day { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-height: 108px; min-width: 0; border: 1px solid #e5eae6; border-radius: 7px; padding: 6px 2px; background: #fff; color: #384b3e; text-align: center; }
+.request-day.selected { outline: 2px solid #b2682b; outline-offset: -2px; background: #fffaf0; }
+.request-day.today .request-day-number { font-weight: 800; color: #a35c25; }
+.request-day.outside { background: #f2f4f3; color: #9aa29d; min-height: 108px; }
+.request-day-number { font-size: 14px; }
+.request-chip { display: flex; flex-direction: column; border-radius: 5px; padding: 5px 0; font-size: 11px; line-height: 1.5; }
+.request-chip.work { background: #eb941a; color: #fff; font-weight: 700; }
+.request-chip.off { background: #d83772; color: #fff; font-size: 10px; }
+.request-chip.empty { background: #f4f6f4; color: #7f8c82; font-size: 10px; }
+.request-event-chip { border-left: 2px solid var(--event-color); background: #f4f5f4; padding: 3px 1px; font-size: 10px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-align: left; overflow-wrap: anywhere; }
+.request-day small { font-size: 9px; }
+.request-overlap { color: #b32e49; font-weight: 700; }
+.request-warning { padding: 12px; margin: 10px 0; border: 1px solid #edc7ce; border-radius: 9px; color: #a52840; background: #fff1f4; font-size: 13px; line-height: 1.6; }
+.request-agenda-title { font-size: 14px; margin: 18px 0 12px; }
+.request-agenda { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #edf0ed; }
+.request-agenda strong { font-size: 14px; }
+.request-agenda small { display: block; margin-top: 4px; color: #6a7b6e; font-size: 12px; }
+.request-day-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+.request-day-actions button { flex: 1; white-space: nowrap; }
+.request-confirm-button { width: 100%; }
+.request-confirm-button:disabled { opacity: .45; }
+.request-time-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.request-time-fields:disabled { opacity: .45; }
+.request-editor-date { font-weight: 700; color: #6b4d2c; }
