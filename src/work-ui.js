@@ -1,8 +1,8 @@
-import { renderShiftRequests, renderRequestEditor } from "./shift-requests-ui.js?v=28";
-import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=28";
-import { icon } from "./icons.js?v=28";
-import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=28";
-import { periodGrid } from "./pay-cycle.js?v=28";
+import { renderShiftRequests, renderRequestEditor } from "./shift-requests-ui.js?v=29";
+import { calendarDayLabel, dateKey, formatDay } from "./domain.js?v=29";
+import { icon } from "./icons.js?v=29";
+import { shiftMinutes, shiftPatterns, shiftPay, shiftsForDay, workPeriodSummary } from "./work.js?v=29";
+import { periodGrid } from "./pay-cycle.js?v=29";
 
 const yen = (value) => `${new Intl.NumberFormat("ja-JP").format(value)}円`;
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);

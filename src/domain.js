@@ -1,4 +1,4 @@
-import { eventCategoryExists } from "./event-categories.js?v=28";
+import { eventCategoryExists } from "./event-categories.js?v=29";
 export const CATEGORIES = {
   university: { label: "大学", color: "#7164db" },
   work: { label: "仕事", color: "#f28b54" },

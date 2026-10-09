@@ -816,3 +816,9 @@ body:has(.money-full-sheet) { overflow: hidden; }
 .request-time-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
 .request-time-fields:disabled { opacity: .45; }
 .request-editor-date { font-weight: 700; color: #6b4d2c; }
+
+.request-selection { margin: 16px 0; }
+.request-selection > button[aria-pressed="true"] { background: #fff1dc; border-color: #b2682b; }
+.request-bulk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+.request-bulk-actions .primary-button { flex: 1; }
+.request-bulk-dates { line-height: 1.8; overflow-wrap: anywhere; max-height: 140px; overflow-y: auto; }

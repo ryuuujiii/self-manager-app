@@ -1,22 +1,22 @@
-import { requestId, requestConflicts, requestConversion, validateShiftRequest } from "./shift-requests.js?v=28";
-import { shiftMonth } from "./pay-cycle.js?v=28";
-import { createDraftController } from "./form-drafts.js?v=28";
-import { eventCategoryCatalog, eventCategoryById, validateEventCategory } from "./event-categories.js?v=28";
-import { addDays, calendarDayLabel, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=28";
-import { confirmShiftRequests, deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=28";
-import { icon } from "./icons.js?v=28";
-import { fixedCostDueDate, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=28";
-import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=28";
-import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=28";
-import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=28";
-import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=28";
-import { payPeriodForDate } from "./pay-cycle.js?v=28";
-import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=28";
-import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=28";
-import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateMemoFolder, validateShoppingItem, validateWishlistItem } from "./life.js?v=28";
-import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=28";
-import { holidayName, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=28";
-import { calendarItemsForDay } from "./schedule-calendar.js?v=28";
+import { requestId, requestConflicts, requestConversion, buildShiftRequests, validateRequestBatch } from "./shift-requests.js?v=29";
+import { shiftMonth } from "./pay-cycle.js?v=29";
+import { createDraftController } from "./form-drafts.js?v=29";
+import { eventCategoryCatalog, eventCategoryById, validateEventCategory } from "./event-categories.js?v=29";
+import { addDays, calendarDayLabel, dateKey, deleteRepeatingEventOccurrence, eventsForDay, formatDay, homeSummary, isValidDateKey, monthGrid, remindersForWindow, todoOccurrence, todosForDay, validateEvent, validateTodo } from "./domain.js?v=29";
+import { confirmShiftRequests, saveShiftRequestBatch, deleteHabit, deleteRecord, exportBackup, getAll, importBackup, openDatabase, putRecord, putWishlistPurchase } from "./db.js?v=29";
+import { icon } from "./icons.js?v=29";
+import { fixedCostDueDate, monthSummary, validateFixedCost, validateTransaction, validateWallet } from "./money.js?v=29";
+import { renderMoneyEditor, renderMoneyScreen, yen } from "./money-ui.js?v=29";
+import { renderMoneyCategoryChoices } from "./money-entry-ui.js?v=29";
+import { MONEY_CATEGORIES, MONEY_CATEGORY_COLORS, moneyCategoryCatalog, resolveMoneyCategories, validateMoneyCategory } from "./money-categories.js?v=29";
+import { renderMoneyCategoryEditor } from "./money-categories-ui.js?v=29";
+import { payPeriodForDate } from "./pay-cycle.js?v=29";
+import { nextShift, shiftMinutes, shiftPay, shiftsForDay, validateWorkplace, validateWorkShift, workPeriod, workPeriodForDate } from "./work.js?v=29";
+import { renderWorkEditor, renderWorkScreen } from "./work-ui.js?v=29";
+import { habitDueOn, habitProgress, mergeChecklistItems, validateChecklist, validateHabit, validateMemo, validateMemoFolder, validateShoppingItem, validateWishlistItem } from "./life.js?v=29";
+import { renderLifeEditor, renderLifeScreen } from "./life-ui.js?v=29";
+import { holidayName, OFFICIAL_HOLIDAYS_THROUGH } from "./jp-holidays.js?v=29";
+import { calendarItemsForDay } from "./schedule-calendar.js?v=29";
 
 const root = document.querySelector("#app");
 const toastElement = document.querySelector("#toast");
@@ -46,6 +46,8 @@ const state = {
   shiftRequests: [],
   requestMonth: null,
   requestSelectedDate: dateKey(),
+  requestMultiSelect: false,
+  requestSelectedDates: [],
   habits: [],
   habitRecords: [],
   checklists: [],
@@ -158,7 +160,7 @@ async function refresh() {
 
 function currentMoneyCategories() { return resolveMoneyCategories(state.moneyCategories, state.transactions, state.fixedCosts); }
 function moneyData() { return { wallet: state.wallets.find((item) => item.id === "cash") || null, transactions: state.transactions, fixedCosts: state.fixedCosts, categories: currentMoneyCategories(), mode: state.moneyMode, trendMode: state.moneyTrendMode, month: state.moneyMonth, selectedDate: state.moneySelectedDate }; }
-function workData() { return { requests: state.shiftRequests, events: state.events, eventCategories: state.eventCategories, requestMonth: state.requestMonth, requestSelectedDate: state.requestSelectedDate, workplaces: state.workplaces, shifts: state.workShifts, workplaceId: state.workWorkplaceId, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
+function workData() { return { requests: state.shiftRequests, events: state.events, eventCategories: state.eventCategories, requestMonth: state.requestMonth, requestSelectedDate: state.requestSelectedDate, requestMultiSelect: state.requestMultiSelect, requestSelectedDates: state.requestSelectedDates, workplaces: state.workplaces, shifts: state.workShifts, workplaceId: state.workWorkplaceId, mode: state.workMode, month: state.workMonth, selectedDate: state.workSelectedDate }; }
 function lifeData() { return { habits: state.habits, habitRecords: state.habitRecords, checklists: state.checklists, shoppingItems: state.shoppingItems, wishlistItems: state.wishlistItems, memos: state.memos, moneyCategories: currentMoneyCategories(), memoFolders: state.memoFolders, activeMemoFolderId: state.activeMemoFolderId, habitMonth: state.habitMonth, mode: state.lifeMode, activeChecklistId: state.activeChecklistId }; }
 
 function header({ eyebrow, title, actions = "", back = false }) {
@@ -596,27 +598,40 @@ function requestPeriod() { return workPeriod(state.requestMonth, state.workplace
 function ensureRequestPeriod() {
   if (!state.requestMonth) state.requestMonth = shiftMonth(workPeriodForDate(dateKey(), state.workplaces.find((item) => item.id === state.workWorkplaceId)), 1);
   const period = requestPeriod();
+  state.requestSelectedDates = (Array.isArray(state.requestSelectedDates) ? state.requestSelectedDates : []).filter((date) => date >= period.start && date <= period.end);
   if (state.requestSelectedDate < period.start || state.requestSelectedDate > period.end) state.requestSelectedDate = period.start;
 }
-function requestFromForm(form) {
+function requestsFromForm(form) {
   const fields = new FormData(form), date = String(fields.get("date") || ""), workplaceId = String(fields.get("workplaceId") || "");
-  const id = requestId(workplaceId, date), existing = state.shiftRequests.find((item) => item.id === id), now = new Date().toISOString();
-  return { id, workplaceId, date, status: String(fields.get("status") || ""), start: String(fields.get("start") || ""), end: String(fields.get("end") || ""), breakMinutes: Number(fields.get("breakMinutes") || 0), note: String(fields.get("note") || "").trim(), createdAt: existing?.createdAt || now, updatedAt: now };
+  const template = { workplaceId, status: String(fields.get("status") || ""), start: String(fields.get("start") || ""), end: String(fields.get("end") || ""), breakMinutes: Number(fields.get("breakMinutes") || 0), note: String(fields.get("note") || "").trim() };
+  return buildShiftRequests(template, state.workEditor?.dates || [date], state.shiftRequests);
 }
 function updateRequestPreview(form) {
   if (form?.dataset.kind !== "request") return;
   form.querySelector(".request-time-fields").disabled = form.elements.namedItem("status").value === "off";
-  const record = requestFromForm(form);
-  const conflicts = validateShiftRequest(record,state.workplaces) ? [] : requestConflicts(record,state.events,state.workShifts);
+  const records = requestsFromForm(form);
+  const conflicts = validateRequestBatch(records,state.workplaces) ? [] : records.flatMap((record) => requestConflicts(record,state.events,state.workShifts).map((item) => ({...item, requestDate: record.date})));
   const warning = form.querySelector(".request-editor-warning");
-  warning.textContent = conflicts.length ? `希望時間と重なっています：${conflicts.map((item) => item.title + (item.allDay ? "（終日）" : `（${item.start}〜${item.end}）`)).join("、")}` : "";
+  warning.textContent = conflicts.length ? `希望時間と重なっています：${conflicts.map((item) => `${item.requestDate.slice(5).replace("-", "/")} ${item.title}（${item.conflictDate.slice(5).replace("-", "/")} ${item.allDay ? "終日" : `${item.start}〜${item.end}`}）`).join("、")}` : "";
   warning.classList.toggle("request-warning", Boolean(conflicts.length));
 }
 async function saveRequestForm(form) {
-  const record = requestFromForm(form), error = validateShiftRequest(record,state.workplaces);
+  const records = requestsFromForm(form), period = state.workEditor?.period || requestPeriod();
+  const error = validateRequestBatch(records,state.workplaces,period);
   if (error) { form.querySelector("#work-form-error").textContent = error; return; }
   state.busy = true;
-  try { await putRecord(state.db,"shiftRequests",record); state.workEditor = null; await refresh(); toast("シフト希望を保存しました。"); }
+  try {
+    let result = await saveShiftRequestBatch(state.db, records, { overwrite: !state.workEditor?.dates, period });
+    if (!result.saved) {
+      const dates = result.replacements.map((item) => item.date.slice(5).replace("-", "/")).join("、");
+      if (!confirm(`入力済みの${result.replacements.length}日（${dates}）を上書きします。選択した${records.length}日分の希望を保存しますか？`)) return;
+      result = await saveShiftRequestBatch(state.db, records, { overwrite: true, period });
+    }
+    state.workEditor = null;
+    state.requestSelectedDates = [];
+    await refresh();
+    toast(`${records.length}日分のシフト希望を保存しました。`);
+  }
   catch (cause) { form.querySelector("#work-form-error").textContent = `保存できませんでした。${cause.message}`; }
   finally { state.busy = false; }
 }
@@ -904,8 +919,23 @@ root.addEventListener("click", async (event) => {
     else if (action === "money-delete-category") await deleteMoneyCategory(button.dataset.id);
     else if (action === "money-delete") await deleteMoneyItem(button.dataset.kind, button.dataset.id);
     else if (action === "work-mode") { state.workMode = button.dataset.mode; ensureRequestPeriod(); render(); }
-    else if (action === "request-select-day") { state.requestSelectedDate = button.dataset.date; render(); }
-    else if (action === "request-prev-period" || action === "request-next-period") { state.requestMonth = shiftMonth(state.requestMonth, action === "request-next-period" ? 1 : -1); state.requestSelectedDate = requestPeriod().start; render(); }
+    else if (action === "request-toggle-multi") { state.requestMultiSelect = !state.requestMultiSelect; state.requestSelectedDates = []; render(); }
+    else if (action === "request-clear-selection") { state.requestSelectedDates = []; render(); }
+    else if (action === "request-bulk-edit") {
+      if (!state.requestSelectedDates.length) return;
+      state.workEditor = { kind: "request", id: null, dates: [...state.requestSelectedDates].sort(), period: requestPeriod(), workplaceId: state.workWorkplaceId };
+      render();
+    }
+    else if (action === "request-select-day") {
+      state.requestSelectedDate = button.dataset.date;
+      if (state.requestMultiSelect) {
+        const dates = new Set(state.requestSelectedDates);
+        if (dates.has(button.dataset.date)) dates.delete(button.dataset.date); else dates.add(button.dataset.date);
+        state.requestSelectedDates = [...dates].sort();
+      }
+      render();
+    }
+    else if (action === "request-prev-period" || action === "request-next-period") { state.requestMonth = shiftMonth(state.requestMonth, action === "request-next-period" ? 1 : -1); state.requestSelectedDate = requestPeriod().start; state.requestSelectedDates = []; render(); }
     else if (action === "request-edit") { const id = requestId(state.workWorkplaceId, state.requestSelectedDate); openWorkEditor("request", state.shiftRequests.some((item) => item.id === id) ? id : null); }
     else if (action === "request-off") await saveOffRequest();
     else if (action === "request-clear") await clearRequest();
@@ -983,7 +1013,7 @@ root.addEventListener("change", async (event) => {
   }
   if(event.target.closest("#money-form")?.classList.contains("money-entry-form")){updateMoneyEntryButton(event.target.form);return;}
   if(event.target.closest("#money-category-form")){updateMoneyCategoryButton(event.target.form);return;}
-  if (event.target.id === "workplace-filter") { state.workWorkplaceId = event.target.value; state.workMonth = workPeriodForDate(state.workSelectedDate, state.workplaces.find((item) => item.id === state.workWorkplaceId)); ensureRequestPeriod(); render(); return; }
+  if (event.target.id === "workplace-filter") { state.requestSelectedDates = []; state.workWorkplaceId = event.target.value; state.workMonth = workPeriodForDate(state.workSelectedDate, state.workplaces.find((item) => item.id === state.workWorkplaceId)); ensureRequestPeriod(); render(); return; }
   if (event.target.id !== "backup-file") return;
   try { await loadBackup(event.target.files?.[0]); }
   catch (cause) { toast(cause?.message || "バックアップを読み込めませんでした。", true); }

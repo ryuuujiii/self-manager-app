@@ -1,5 +1,5 @@
-import { addDays, eventsForDay, isValidDateKey } from "./domain.js?v=28";
-import { validateWorkShift } from "./work.js?v=28";
+import { addDays, eventsForDay, isValidDateKey } from "./domain.js?v=29";
+import { validateWorkShift } from "./work.js?v=29";
 
 export const requestId = (workplaceId, date) => `${workplaceId}:${date}`;
 export function validateShiftRequest(value, workplaces) {
@@ -8,6 +8,26 @@ export function validateShiftRequest(value, workplaces) {
   if (!["work", "off"].includes(value.status)) return "勤務希望または休みを選んでください。";
   if (value.status === "work") return validateWorkShift(value, workplaces);
   if (typeof value.note !== "string" || value.note.length > 2000) return "メモは2000文字以内で入力してください。";
+  return null;
+}
+// Keep one daily record per date; bulk entry does not change the storage format.
+export function buildShiftRequests(template, dates, existing = [], now = new Date().toISOString()) {
+  return [...new Set(dates)].sort().map((date) => {
+    const id = requestId(template.workplaceId, date);
+    const previous = existing.find((item) => item.id === id);
+    return { ...template, id, date, createdAt: previous?.createdAt || now, updatedAt: now };
+  });
+}
+export function validateRequestBatch(records, workplaces, period) {
+  if (!records.length) return "日付を選んでください。";
+  const ids = new Set();
+  for (const record of records) {
+    const error = validateShiftRequest(record, workplaces);
+    if (error) return error;
+    if (record.workplaceId !== records[0].workplaceId || ids.has(record.id)) return "勤務先・日付の組み合わせが不正です。";
+    if (period && (record.date < period.start || record.date > period.end)) return "希望期間内の日付を選んでください。";
+    ids.add(record.id);
+  }
   return null;
 }
 function interval(date, start, end) {
